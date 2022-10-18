@@ -22,18 +22,57 @@ class SinusoidalPositionEmbeddings(nn.Module):
         return embeddings
 
 
+class Block(nn.Module):
+    def __init__(self, embed_in, embed_out):
+        super().__init__()
+
+        self.dense1 = nn.Linear(
+            embed_in,
+            embed_out // 2
+        )
+        self.dense2 = nn.Linear(
+            embed_in,
+            embed_out // 2
+        )
+        self.dense3 = nn.Linear(
+            embed_in,
+            embed_out // 2
+        )
+        self.relu1 = nn.Tanh()
+        self.dense4 = nn.Linear(
+            embed_out,
+            embed_out
+        )
+        self.relu2 = nn.ReLU()
+
+    def forward(self, x):
+        x1 = self.dense1(x)
+        x2 = self.dense2(x)
+        x3 = self.dense3(x)
+        dot = torch.mul(x2, x3)
+        res = torch.cat([x1, dot], dim=-1)
+        res = self.relu1(res)
+        res = self.dense4(res)
+        return self.relu2(res)
+
+
 class SimpleDenoiser(nn.Module):
 
     def __init__(self):
         super().__init__()
 
-        self.simple = nn.Sequential(
-            nn.Linear(N * M, N * M),
-            nn.ReLU(),
-            nn.Linear(N * M, N * M),
-            nn.ReLU(),
-            nn.Linear(N * M, N * M),
+        self.funny = nn.Sequential(
+            Block(N * M, N * HIDDEN),
+            Block(N * HIDDEN, N * HIDDEN),
+            # Block(N * HIDDEN, N * HIDDEN),
+            # Block(N * HIDDEN, N * HIDDEN),
+            Block(N * HIDDEN, N * M)
         )
+
+        self.final_linear = nn.Sequential(
+            nn.Linear(2 * N * M, N * M)
+        )
+        return
 
         # Time embedding
         self.time_mlp = nn.Sequential(
@@ -77,11 +116,14 @@ class SimpleDenoiser(nn.Module):
         self.result = nn.Sequential(
             nn.Linear(N * HIDDEN, N * HIDDEN),
             nn.ReLU(),
-            nn.Linear(N * HIDDEN, N * M)
+            nn.Linear(N * HIDDEN, N * M),
+            nn.Tanh(),
+            nn.Linear(N * M, N * M),
         )
 
     def forward(self, image, timestep):
         image = image.view(-1, N * M)
+        return self.final_linear(torch.cat([self.funny(image), image], dim=1)).reshape(-1, N, M)
         t = self.time_mlp(timestep)
         image = self.prepare_embed(image)
         batch_size = image.shape[0]
