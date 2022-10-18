@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/Users/maxim-kuzin/ml/pythonProject/diffvg')
+
 import pydiffvg
 import torch
 import numpy as np
