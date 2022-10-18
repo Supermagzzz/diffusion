@@ -7,7 +7,6 @@ from torch.nn.functional import l1_loss
 from dataset.dataloader import CustomImageDataset
 from torch.utils.data import DataLoader
 from model.model import SimpleDenoiser
-import diffvg
 
 dataset = CustomImageDataset('data/tensors')
 dataloader = DataLoader(dataset, batch_size=len(dataset.images) // 2, shuffle=False, drop_last=True)
@@ -62,10 +61,12 @@ for epoch in range(1000):
         pred_noise = model(new_img.to(device), torch.Tensor(1).to(device))
         pred_batch = new_img - pred_noise
         losses = []
+        baselines = []
         for i in range(batch.shape[0]):
             losses.append((make_image(batch[i]) - make_image(pred_batch[i])).pow(2).sum())
+            baselines.append((make_image(batch[i]) - make_image(new_img[i])).pow(2).sum())
         loss = sum(losses)
-        baseline = (new_img - batch).pow(2).sum()
+        baseline = sum(baselines)
         loss.backward()
         optimizer.step()
         if step == 0:
