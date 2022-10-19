@@ -28,22 +28,22 @@ def make_image(inp):
     pathes = []
     groups = []
     for j, row in enumerate(el):
-        num_control_points = []
-        points = []
-        points.append(0)
-        points.append(1)
         for i in range(2, row.shape[0], 6):
+            num_control_points = []
+            points = []
             num_control_points.append(2)
+            points.append(i - 2)
+            points.append(i - 1)
             points.append(i + 2)
             points.append(i + 3)
             points.append(i)
             points.append(i + 1)
             points.append(i + 4)
             points.append(i + 5)
-        points = row[points].reshape(-1, 2)
-        pathes.append(pydiffvg.Path(torch.Tensor(num_control_points), points, False))
-        groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([j]), fill_color=None,
-                                          stroke_color=torch.tensor([0, 0, 0, 1])))
+            points = row[points].reshape(-1, 2)
+            pathes.append(pydiffvg.Path(torch.Tensor(num_control_points), points, False))
+            groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([i // 6]), fill_color=None,
+                                              stroke_color=torch.tensor([i / row.shape[0], i / row.shape[0], i / row.shape[0], 1])))
         break
     scene_args = pydiffvg.RenderFunction.serialize_scene(canvas_width, canvas_height, pathes, groups)
     render = pydiffvg.RenderFunction.apply
@@ -54,6 +54,8 @@ def make_image(inp):
                  1,  # seed
                  None,
                  *scene_args)
+    pydiffvg.imwrite(img.cpu(), 'test.png', gamma=2.2)
+    exit(0)
     return img
 
 
