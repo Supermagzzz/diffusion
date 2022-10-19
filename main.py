@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from model.model import SimpleDenoiser
 
 dataset = CustomImageDataset('data/tensors')
-dataloader = DataLoader(dataset, batch_size=len(dataset.images) // 2, shuffle=False, drop_last=True)
+dataloader = DataLoader(dataset, batch_size=128, shuffle=False, drop_last=True)
 
 
 def add_noise(tensor, mult):
@@ -28,13 +28,9 @@ def make_image(el):
     groups = []
     for j, row in enumerate(data):
         num_control_points = []
-        points = []
-        points.append((row[0], row[1]))
+        points = row.reshape(-1, 2)
         for i in range(2, row.shape[0], 6):
             num_control_points.append(2)
-            points.append((row[i], row[i + 1]))
-            points.append((row[i + 2], row[i + 3]))
-            points.append((row[i + 4], row[i + 5]))
         pathes.append(pydiffvg.Path(torch.Tensor(num_control_points), torch.Tensor(points), False))
         groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([j]), fill_color=None,
                                           stroke_color=torch.tensor([0, 0, 0, 1.0])))
@@ -42,8 +38,8 @@ def make_image(el):
     render = pydiffvg.RenderFunction.apply
     img = render(256,  # width
                  256,  # height
-                 5,  # num_samples_x
-                 5,  # num_samples_y
+                 2,  # num_samples_x
+                 2,  # num_samples_y
                  0,  # seed
                  None,
                  *scene_args)
@@ -56,7 +52,7 @@ print(device)
 model.to(device)
 optimizer = Adam(model.parameters(), lr=0.001)
 new_img, noise = None, None
-for epoch in range(1000):
+for epoch in range(100000):
     for step, batch in enumerate(dataloader):
         optimizer.zero_grad()
         noise = add_noise(batch, 0.01)
@@ -72,8 +68,7 @@ for epoch in range(1000):
         baseline = sum(baselines)
         loss.backward()
         optimizer.step()
-        if step == 0:
-            print(epoch, loss.item(), baseline.item(), loss.item() - baseline.item())
+        print(epoch, loss.item(), baseline.item(), loss.item() - baseline.item())
     if epoch % 10 == 0:
         torch.save(model.state_dict(), 'model_weights')
         print('saved')
