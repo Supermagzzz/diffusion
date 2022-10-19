@@ -16,7 +16,7 @@ dataloader = DataLoader(dataset, batch_size=128, shuffle=False, drop_last=True)
 
 
 def add_noise(tensor, mult):
-    return torch.normal(0, 1, size=tensor.shape) * mult
+    return torch.cat([torch.normal(0, 1, size=(1, *tensor.shape[1:])) * mult, torch.zeros(size=(tensor.shape[0] - 1, *tensor.shape[1:]))])
 
 
 def make_image(inp):
@@ -42,8 +42,9 @@ def make_image(inp):
             points.append(i + 5)
         points = row[points].reshape(-1, 2)
         pathes.append(pydiffvg.Path(torch.Tensor(num_control_points), points, False))
-    groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([0, 1, 2, 3, 4]), fill_color=None,
-                                      stroke_color=torch.tensor([0, 0, 0, 1])))
+        groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([j]), fill_color=None,
+                                          stroke_color=torch.tensor([0, 0, 0, 1])))
+        break
     scene_args = pydiffvg.RenderFunction.serialize_scene(canvas_width, canvas_height, pathes, groups)
     render = pydiffvg.RenderFunction.apply
     img = render(canvas_width,  # width
