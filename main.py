@@ -17,7 +17,7 @@ dataloader = DataLoader(dataset, batch_size=128, shuffle=False, drop_last=True)
 
 
 def add_noise(tensor, mult):
-    return torch.cat([torch.normal(0, 1, size=(1, *tensor.shape[1:])) * mult, torch.zeros(size=(tensor.shape[0] - 1, *tensor.shape[1:]))])
+    return torch.normal(0, 1, size=tensor.shape) * mult
 
 
 def make_image(inp):
