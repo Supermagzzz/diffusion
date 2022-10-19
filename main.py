@@ -55,7 +55,8 @@ new_img, noise = None, None
 for epoch in range(100000):
     for step, batch in enumerate(dataloader):
         optimizer.zero_grad()
-        noise = add_noise(batch, 0.01)
+        batch = batch.to(device)
+        noise = add_noise(batch, 0.01).to(device)
         new_img = batch + noise
         pred_noise = model(new_img.to(device), torch.Tensor(1).to(device))
         pred_batch = new_img - pred_noise
