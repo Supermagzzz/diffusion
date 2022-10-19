@@ -69,16 +69,16 @@ for epoch in range(100000):
         batch = batch.to(device)
         noise = add_noise(batch, 0.01).to(device)
         new_img = batch + noise
-        png = torch.zeros((batch.shape[0], 64, 64, 4))
+        png = torch.zeros((batch.shape[0], 64, 64, 4)).to(device)
         for i in range(batch.shape[0]):
             png[i] = make_image(new_img[i])
         pred_noise = model(png, new_img, torch.Tensor(1).to(device))
 
-        pred_png = torch.zeros((batch.shape[0], 64, 64, 4))
+        pred_png = torch.zeros((batch.shape[0], 64, 64, 4)).to(device)
         for i in range(batch.shape[0]):
             pred_png[i] = make_image(pred_noise[i])
 
-        base_png = torch.zeros((batch.shape[0], 64, 64, 4))
+        base_png = torch.zeros((batch.shape[0], 64, 64, 4)).to(device)
         for i in range(batch.shape[0]):
             base_png[i] = make_image(batch[i])
 
