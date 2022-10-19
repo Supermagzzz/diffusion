@@ -1,3 +1,4 @@
+import math
 import sys
 sys.path.append('/Users/maxim-kuzin/ml/pythonProject/diffvg')
 
@@ -27,23 +28,31 @@ def make_image(inp):
     el += int(0.1 * canvas_width)
     pathes = []
     groups = []
+
+    def get_color(ind, all):
+        x = int(math.log(all, 3))
+        a = ind % x
+        b = (ind // x) % x
+        c = (ind // x // x) % x
+        return torch.Tensor([a / x, b / x, c / x, 1])
+
     for j, row in enumerate(el):
-        num_control_points = []
-        points = []
-        points.append(0)
-        points.append(1)
         for i in range(2, row.shape[0], 6):
+            num_control_points = []
+            points = []
             num_control_points.append(2)
+            points.append(i - 2)
+            points.append(i - 1)
             points.append(i + 2)
             points.append(i + 3)
             points.append(i)
             points.append(i + 1)
             points.append(i + 4)
             points.append(i + 5)
-        points = row[points].reshape(-1, 2)
-        pathes.append(pydiffvg.Path(torch.Tensor(num_control_points), points, False))
-        groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([j]), fill_color=None,
-                                          stroke_color=torch.tensor([0, 0, 0, 1])))
+            points = row[points].reshape(-1, 2)
+            pathes.append(pydiffvg.Path(torch.Tensor(num_control_points), points, False))
+            groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([len(groups)]), fill_color=None,
+                                              stroke_color=get_color(len(groups), 100)))
     scene_args = pydiffvg.RenderFunction.serialize_scene(canvas_width, canvas_height, pathes, groups)
     render = pydiffvg.RenderFunction.apply
     img = render(canvas_width,  # width
@@ -73,17 +82,8 @@ for epoch in range(100000):
         for i in range(batch.shape[0]):
             png[i] = make_image(new_img[i])
         pred_noise = model(png, new_img, torch.Tensor(1).to(device))
-
-        pred_png = torch.zeros((batch.shape[0], 64, 64, 4)).to(device)
-        for i in range(batch.shape[0]):
-            pred_png[i] = make_image(pred_noise[i])
-
-        base_png = torch.zeros((batch.shape[0], 64, 64, 4)).to(device)
-        for i in range(batch.shape[0]):
-            base_png[i] = make_image(batch[i])
-
-        loss = (png - pred_png).pow(2).sum()
-        baseline = (png - base_png).pow(2).sum()
+        loss = (noise - pred_noise).pow(2).sum()
+        baseline = (noise - noise * 0).pow(2).sum()
         loss.backward()
         optimizer.step()
         print(epoch, loss.item(), baseline.item(), loss.item() - baseline.item())
