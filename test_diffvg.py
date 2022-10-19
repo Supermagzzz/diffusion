@@ -11,8 +11,8 @@ from model.model import SimpleDenoiser
 import diffvg
 import pydiffvg
 
-canvas_width = 256
-canvas_height = 256
+canvas_width = 100
+canvas_height = 100
 
 
 def make_svg(tensor):
@@ -44,9 +44,13 @@ def make_svg(tensor):
     return SVG.from_tensor(torch.Tensor(data))
 
 dataset = CustomImageDataset('data/tensors')
-for el in dataset:
-    el -= torch.min(el) - 0.5
-    el *= 100
+for j, el in enumerate(dataset):
+    if j <= 4:
+        continue
+    canvas_width, canvas_height = 50, 50
+    el += 0.5
+    el *= int(0.8 * canvas_width)
+    el += int(0.1 * canvas_width)
     pathes = []
     groups = []
     for j, row in enumerate(el):
@@ -55,18 +59,18 @@ for el in dataset:
         points.append((row[0], row[1]))
         for i in range(2, row.shape[0], 6):
             num_control_points.append(2)
-            points.append((row[i], row[i + 1]))
             points.append((row[i + 2], row[i + 3]))
+            points.append((row[i], row[i + 1]))
             points.append((row[i + 4], row[i + 5]))
-        pathes.append(pydiffvg.Path(torch.Tensor(num_control_points), torch.Tensor(points), False))
-        groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([j]), fill_color=None, stroke_color=torch.tensor([0, 0, 0, 1.0])))
+        pathes.append(pydiffvg.Path(torch.Tensor(num_control_points), torch.Tensor(points), True))
+    groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([0, 1, 2, 3, 4]), fill_color=None, stroke_color=torch.tensor([0, 0, 0, 1])))
     scene_args = pydiffvg.RenderFunction.serialize_scene(canvas_width, canvas_height, pathes, groups)
     render = pydiffvg.RenderFunction.apply
-    img = render(256,  # width
-                 256,  # height
+    img = render(canvas_width,  # width
+                 canvas_height,  # height
                  2,  # num_samples_x
                  2,  # num_samples_y
-                 0,  # seed
+                 1,  # seed
                  None,
                  *scene_args)
     pydiffvg.imwrite(img.cpu(), 'test.png', gamma=2.2)

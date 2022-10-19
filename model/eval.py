@@ -5,24 +5,49 @@ from torch import nn
 from dataset.dataloader import CustomImageDataset
 from deepsvg.svglib.svg import SVG
 from model import SimpleDenoiser
+import pydiffvg
 
 dataset = CustomImageDataset('../data/tensors')
 
+def make_image(inp):
+    # return el
+    canvas_width, canvas_height = 50, 50
+    el = (inp + 0.5)
+    el *= int(0.8 * canvas_width)
+    el += int(0.1 * canvas_width)
+    pathes = []
+    groups = []
+    for j, row in enumerate(el):
+        num_control_points = []
+        points = []
+        points.append(0)
+        points.append(1)
+        for i in range(2, row.shape[0], 6):
+            num_control_points.append(2)
+            points.append(i + 2)
+            points.append(i + 3)
+            points.append(i)
+            points.append(i + 1)
+            points.append(i + 4)
+            points.append(i + 5)
+        points = row[points].reshape(-1, 2)
+        pathes.append(pydiffvg.Path(torch.Tensor(num_control_points), points, False))
+    groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([0, 1, 2, 3, 4]), fill_color=None,
+                                      stroke_color=torch.tensor([0, 0, 0, 1])))
+    scene_args = pydiffvg.RenderFunction.serialize_scene(canvas_width, canvas_height, pathes, groups)
+    render = pydiffvg.RenderFunction.apply
+    img = render(canvas_width,  # width
+                 canvas_height,  # height
+                 2,  # num_samples_x
+                 2,  # num_samples_y
+                 1,  # seed
+                 None,
+                 *scene_args)
+    return img
+
 def run():
     def add_noise(tensor, mult):
-        noise = []
-        new_img = []
-        for tens in tensor:
-            noise.append([])
-            new_img.append([])
-            for row in tens:
-                noise[-1].append([])
-                new_img[-1].append([])
-                for el in row:
-                    noi = np.random.normal() * mult
-                    noise[-1][-1].append(noi)
-                    new_img[-1][-1].append(el + noi)
-        return torch.Tensor(new_img), torch.Tensor(noise)
+        return torch.normal(0, 1, size=tensor.shape) * mult
 
     def make_svg(tensor):
         tensor -= torch.min(tensor) - 0.5
@@ -59,9 +84,10 @@ def run():
     for i, img in enumerate(dataset):
         if i == 3:
             break
-        new_img, noise = add_noise([img], 0.01)
-        pred_noise = model(img, torch.Tensor(1))
-        make_svg(new_img[0] - pred_noise[0]).save_svg('../trash/' + 'test' + str(i) + '.svg')
+        noise = add_noise(img, 0.01)
+        new_img = img + noise
+        pred_noise = model(make_image(new_img), torch.Tensor(1))
+        make_svg(new_img - pred_noise[0]).save_svg('../trash/' + 'test' + str(i) + '.svg')
         make_svg(img).save_svg('../trash/' + 'real' + str(i) + '.svg')
-        make_svg(new_img[0]).save_svg('../trash/' + 'inp' + str(i) + '.svg')
+        make_svg(new_img).save_svg('../trash/' + 'inp' + str(i) + '.svg')
 run()
