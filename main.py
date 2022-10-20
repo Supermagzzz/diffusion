@@ -46,9 +46,9 @@ def make_image(inp):
             points.append(i + 4)
             points.append(i + 5)
             points = row[points].reshape(-1, 2)
-            pathes.append(pydiffvg.Path(torch.Tensor(num_control_points), points, False))
-            groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([len(groups)]), fill_color=None,
-                                              stroke_color=torch.Tensor([0, 0, 0, 1])))
+            pathes.append(pydiffvg.Path(torch.Tensor(num_control_points).to(device), points, False))
+            groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([len(groups)]).to(device), fill_color=None,
+                                              stroke_color=torch.Tensor([0, 0, 0, 1]).to(device)))
             scene_args = pydiffvg.RenderFunction.serialize_scene(canvas_width, canvas_height, pathes, groups)
             render = pydiffvg.RenderFunction.apply
             img = render(canvas_width,  # width
