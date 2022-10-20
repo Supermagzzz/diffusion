@@ -50,7 +50,7 @@ class SinusoidalPositionEmbeddings(nn.Module):
 class SimpleDenoiser(nn.Module):
     def __init__(self):
         super().__init__()
-        self.image_channels = 4
+        self.image_channels = 4 * N * ((M - 2) // 6)
         self.input_sz = 64
 
         image_channels = self.image_channels
