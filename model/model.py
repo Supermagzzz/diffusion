@@ -51,7 +51,7 @@ class SinusoidalPositionEmbeddings(nn.Module):
 
 
 class SimpleDenoiser(nn.Module):
-    def __init__(self, noise_level):
+    def __init__(self, noise_level, device):
         super().__init__()
         self.embeddingsSX = nn.Embedding(BLOCKS, 3 * HIDDEN)
         self.embeddingsSY = nn.Embedding(BLOCKS, 3 * HIDDEN)
@@ -104,7 +104,7 @@ class SimpleDenoiser(nn.Module):
             nn.Linear(BLOCKS, BLOCKS),
         )
 
-        self.to_dot = torch.Tensor([noise_level * (i / BLOCKS * 2 - 1) for i in range(BLOCKS)])
+        self.to_dot = torch.Tensor([noise_level * (i / BLOCKS * 2 - 1) for i in range(BLOCKS)]).to(device)
 
         # self.image_channels = 4 * N * ((M - 2) // 6) // M_DIV
         # self.input_sz = 64

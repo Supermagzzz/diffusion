@@ -66,8 +66,8 @@ def make_image(inp):
 
 torch.autograd.set_detect_anomaly(True)
 noise_level = 0.003
-model = SimpleDenoiser(noise_level)
 device = "cuda" if torch.cuda.is_available() else "cpu"
+model = SimpleDenoiser(noise_level, device)
 print(device)
 model.to(device)
 optimizer = Adam(model.parameters(), lr=0.0001)
@@ -86,7 +86,7 @@ for epoch in range(100000):
         baseline = l1_loss(noise, noise * 0)
         loss.backward()
         optimizer.step()
-        print(epoch, loss.item(), baseline.item(), (loss - baseline).item())
+        print(epoch, loss.item(), baseline.item(), (loss / baseline).item())
     if epoch % 10 == 0:
         torch.save(model.state_dict(), 'model_weights')
         print('saved')
