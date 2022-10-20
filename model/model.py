@@ -7,7 +7,7 @@ M = 2 + 6 * M_REAL
 N = 5
 IMG_N = 50
 HIDDEN = 128
-M_DIV = 4
+M_DIV = 1
 
 
 class Block(nn.Module):
