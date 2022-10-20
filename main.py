@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from model.model import SimpleDenoiser
 
 dataset = CustomImageDataset('data/tensors')
-dataloader = DataLoader(dataset, batch_size=100, shuffle=False, drop_last=True)
+dataloader = DataLoader(dataset, batch_size=1, shuffle=False, drop_last=True)
 
 
 def add_noise(tensor, mult):
@@ -65,7 +65,8 @@ def make_image(inp):
 
 
 torch.autograd.set_detect_anomaly(True)
-model = SimpleDenoiser()
+noise_level = 0.003
+model = SimpleDenoiser(noise_level)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 model.to(device)
@@ -75,7 +76,7 @@ for epoch in range(100000):
     for step, batch in enumerate(dataloader):
         optimizer.zero_grad()
         batch = batch.to(device)
-        noise = add_noise(batch, 0.003).to(device)
+        noise = add_noise(batch, noise_level).to(device)
         new_img = batch + noise
         # png = torch.zeros((batch.shape[0], 64, 64, 4 * N * M)).to(device)
         # for i in range(batch.shape[0]):
