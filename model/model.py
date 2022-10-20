@@ -6,7 +6,7 @@ M_REAL = 20
 M = 2 + 6 * M_REAL
 N = 5
 IMG_N = 50
-HIDDEN = 512
+HIDDEN = 128
 M_DIV = 1
 
 
@@ -53,14 +53,14 @@ class SimpleDenoiser(nn.Module):
     def __init__(self):
         super().__init__()
         self.prepare = nn.Sequential(
-            nn.Linear(1, HIDDEN),
+            nn.Linear(2, HIDDEN),
             nn.ReLU()
         )
         self.transformer = nn.Transformer(d_model=HIDDEN)
         self.result = nn.Sequential(
             nn.Linear(HIDDEN, HIDDEN),
             nn.ReLU(),
-            nn.Linear(HIDDEN, 1)
+            nn.Linear(HIDDEN, 2)
         )
         # self.image_channels = 4 * N * ((M - 2) // 6) // M_DIV
         # self.input_sz = 64
@@ -117,7 +117,7 @@ class SimpleDenoiser(nn.Module):
         # )
 
     def forward(self, svg, timestep):
-        svg = svg.reshape(-1, N * M, 1)
+        svg = svg.reshape(-1, N * M // 2, 2)
         svg = self.prepare(svg)
         svg = self.transformer(svg, svg)
         svg = self.result(svg)

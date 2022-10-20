@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from model.model import SimpleDenoiser
 
 dataset = CustomImageDataset('data/tensors')
-dataloader = DataLoader(dataset, batch_size=128, shuffle=False, drop_last=True)
+dataloader = DataLoader(dataset, batch_size=100, shuffle=False, drop_last=True)
 
 
 def add_noise(tensor, mult):
@@ -69,20 +69,20 @@ model = SimpleDenoiser()
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 model.to(device)
-optimizer = Adam(model.parameters(), lr=0.001)
+optimizer = Adam(model.parameters(), lr=0.0001)
 new_img, noise = None, None
 for epoch in range(100000):
     for step, batch in enumerate(dataloader):
         optimizer.zero_grad()
         batch = batch.to(device)
-        noise = add_noise(batch, 0.01).to(device)
+        noise = add_noise(batch, 0.003).to(device)
         new_img = batch + noise
         # png = torch.zeros((batch.shape[0], 64, 64, 4 * N * M)).to(device)
         # for i in range(batch.shape[0]):
         #     png[i] = make_image(new_img[i])
         pred_noise = model(new_img, torch.Tensor(1).to(device))
-        loss = (noise - pred_noise).pow(2).sum()
-        baseline = (noise - noise * 0).pow(2).sum()
+        loss = l1_loss(noise, pred_noise)
+        baseline = l1_loss(noise, noise * 0)
         loss.backward()
         optimizer.step()
         print(epoch, loss.item(), baseline.item(), (loss - baseline).item())
