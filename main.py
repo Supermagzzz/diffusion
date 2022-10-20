@@ -77,10 +77,10 @@ for epoch in range(100000):
         batch = batch.to(device)
         noise = add_noise(batch, 0.01).to(device)
         new_img = batch + noise
-        png = torch.zeros((batch.shape[0], 64, 64, 4 * N * M)).to(device)
-        for i in range(batch.shape[0]):
-            png[i] = make_image(new_img[i])
-        pred_noise = model(png, new_img, torch.Tensor(1).to(device))
+        # png = torch.zeros((batch.shape[0], 64, 64, 4 * N * M)).to(device)
+        # for i in range(batch.shape[0]):
+        #     png[i] = make_image(new_img[i])
+        pred_noise = model(new_img, torch.Tensor(1).to(device))
         loss = (noise - pred_noise).pow(2).sum()
         baseline = (noise - noise * 0).pow(2).sum()
         loss.backward()
