@@ -53,58 +53,14 @@ class SinusoidalPositionEmbeddings(nn.Module):
 class SimpleDenoiser(nn.Module):
     def __init__(self, noise_level, device):
         super().__init__()
-        self.embeddingsSX = nn.Embedding(BLOCKS, 3 * HIDDEN)
-        self.embeddingsSY = nn.Embedding(BLOCKS, 3 * HIDDEN)
-        self.embeddings1 = nn.Embedding(BLOCKS, HIDDEN)
-        self.embeddings2 = nn.Embedding(BLOCKS, HIDDEN)
-        self.embeddings3 = nn.Embedding(BLOCKS, HIDDEN)
-        self.embeddings4 = nn.Embedding(BLOCKS, HIDDEN)
-        self.embeddings5 = nn.Embedding(BLOCKS, HIDDEN)
-        self.embeddings6 = nn.Embedding(BLOCKS, HIDDEN)
-        self.transformer = nn.Transformer(d_model=6 * HIDDEN)
-
-        self.make_probSX = nn.Sequential(
-            nn.Linear(6 * HIDDEN, BLOCKS),
-            nn.Tanh(),
-            nn.Linear(BLOCKS, BLOCKS),
+        self.in_embeddings = nn.Embedding(BLOCKS, HIDDEN)
+        self.out_embeddings = nn.Embedding(BLOCKS, HIDDEN)
+        self.transformer = nn.Transformer(d_model=HIDDEN)
+        self.make_coords = nn.Sequential(
+            nn.Linear(HIDDEN, 2 * BLOCKS),
+            nn.Softmax(),
+            nn.Linear(2 * BLOCKS, 1),
         )
-        self.make_probSY = nn.Sequential(
-            nn.Linear(6 * HIDDEN, BLOCKS),
-            nn.Tanh(),
-            nn.Linear(BLOCKS, BLOCKS),
-        )
-        self.make_prob1 = nn.Sequential(
-            nn.Linear(6 * HIDDEN, BLOCKS),
-            nn.Tanh(),
-            nn.Linear(BLOCKS, BLOCKS),
-        )
-        self.make_prob2 = nn.Sequential(
-            nn.Linear(6 * HIDDEN, BLOCKS),
-            nn.Tanh(),
-            nn.Linear(BLOCKS, BLOCKS),
-        )
-        self.make_prob3 = nn.Sequential(
-            nn.Linear(6 * HIDDEN, BLOCKS),
-            nn.Tanh(),
-            nn.Linear(BLOCKS, BLOCKS),
-        )
-        self.make_prob4 = nn.Sequential(
-            nn.Linear(6 * HIDDEN, BLOCKS),
-            nn.Tanh(),
-            nn.Linear(BLOCKS, BLOCKS),
-        )
-        self.make_prob5 = nn.Sequential(
-            nn.Linear(6 * HIDDEN, BLOCKS),
-            nn.Tanh(),
-            nn.Linear(BLOCKS, BLOCKS),
-        )
-        self.make_prob6 = nn.Sequential(
-            nn.Linear(6 * HIDDEN, BLOCKS),
-            nn.Tanh(),
-            nn.Linear(BLOCKS, BLOCKS),
-        )
-
-        self.to_dot = torch.Tensor([noise_level * (i / BLOCKS * 2 - 1) for i in range(BLOCKS)]).to(device)
 
         # self.image_channels = 4 * N * ((M - 2) // 6) // M_DIV
         # self.input_sz = 64
@@ -161,61 +117,13 @@ class SimpleDenoiser(nn.Module):
         # )
 
     def forward(self, svg, timestep):
-        def ind(x):
-            return torch.clamp((((x + 1) / 2) * BLOCKS).long(), 0, BLOCKS - 1)
+        svg = svg.reshape(-1, N * M)
+        in_embeds = self.in_embeddings(torch.clamp((((svg + 1) / 2) * BLOCKS).long(), 0, BLOCKS - 1))
+        out_embeds = self.out_embeddings(torch.clamp((((svg + 1) / 2) * BLOCKS).long(), 0, BLOCKS - 1))
+        svg_embeds = self.transformer(in_embeds, out_embeds)
+        svg_coords = self.make_coords(svg_embeds)
+        return svg_coords.reshape(-1, N, M)
 
-        embeds = []
-        for b in range(svg.shape[0]):
-            cur_embeds = []
-            for i in range(N):
-                cur_embeds.append(
-                    torch.concat([
-                        self.embeddingsSX(ind(svg[b][i][0])),
-                        self.embeddingsSY(ind(svg[b][i][1])),
-                    ])
-                )
-                for j in range(2, M, 6):
-                    cur_embeds.append(
-                        torch.concat([
-                            self.embeddings1(ind(svg[b][i][j])),
-                            self.embeddings2(ind(svg[b][i][j+1])),
-                            self.embeddings3(ind(svg[b][i][j+2])),
-                            self.embeddings4(ind(svg[b][i][j+3])),
-                            self.embeddings5(ind(svg[b][i][j+4])),
-                            self.embeddings6(ind(svg[b][i][j+5])),
-                        ])
-                    )
-            embeds.append(torch.stack(cur_embeds))
-        svg_embeds = torch.stack(embeds)
-        svg_embeds = self.transformer(svg_embeds, svg_embeds)
-        svg_probsSX = self.make_probSX(svg_embeds)
-        svg_probsSY = self.make_probSY(svg_embeds)
-        svg_probs1 = self.make_prob1(svg_embeds)
-        svg_probs2 = self.make_prob2(svg_embeds)
-        svg_probs3 = self.make_prob3(svg_embeds)
-        svg_probs4 = self.make_prob4(svg_embeds)
-        svg_probs5 = self.make_prob5(svg_embeds)
-        svg_probs6 = self.make_prob6(svg_embeds)
-
-        result = []
-        for b in range(svg.shape[0]):
-            coords = []
-            ind = 0
-            for i in range(svg.shape[1]):
-                coords.append(torch.dot(self.to_dot, svg_probsSX[b][ind]))
-                coords.append(torch.dot(self.to_dot, svg_probsSY[b][ind]))
-                ind += 1
-                for j in range(2, svg.shape[2], 6):
-                    coords.append(torch.dot(self.to_dot, svg_probs1[b][ind]))
-                    coords.append(torch.dot(self.to_dot, svg_probs2[b][ind]))
-                    coords.append(torch.dot(self.to_dot, svg_probs3[b][ind]))
-                    coords.append(torch.dot(self.to_dot, svg_probs4[b][ind]))
-                    coords.append(torch.dot(self.to_dot, svg_probs5[b][ind]))
-                    coords.append(torch.dot(self.to_dot, svg_probs6[b][ind]))
-                    ind += 1
-            result.append(torch.stack(coords))
-
-        return torch.stack(result).reshape(-1, N, M)
         # t = self.time_mlp(timestep)
         # prep_svg = self.prepareSvg(svg.reshape(-1, N * M))
         # prep_svg = prep_svg.reshape(-1, self.input_sz, self.input_sz, 1)
