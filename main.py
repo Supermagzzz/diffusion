@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from model.model import SimpleDenoiser
 
 dataset = CustomImageDataset('data/tensors')
-dataloader = DataLoader(dataset, batch_size=1, shuffle=False, drop_last=True)
+dataloader = DataLoader(dataset, batch_size=128, shuffle=False, drop_last=True)
 
 
 def add_noise(tensor, mult):
@@ -30,10 +30,10 @@ def make_image(inp):
     el += int(0.1 * canvas_width)
 
     all_ims = []
+    pathes = []
+    groups = []
     for j, row in enumerate(el):
         for i in range(2, row.shape[0], 6):
-            pathes = []
-            groups = []
             num_control_points = []
             points = []
             num_control_points.append(2)
@@ -49,16 +49,19 @@ def make_image(inp):
             pathes.append(pydiffvg.Path(torch.Tensor(num_control_points), points, False))
             groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([len(groups)]), fill_color=None,
                                               stroke_color=torch.Tensor([0, 0, 0, 1])))
-            scene_args = pydiffvg.RenderFunction.serialize_scene(canvas_width, canvas_height, pathes, groups)
-            render = pydiffvg.RenderFunction.apply
-            img = render(canvas_width,  # width
-                         canvas_height,  # height
-                         2,  # num_samples_x
-                         2,  # num_samples_y
-                         1,  # seed
-                         None,
-                         *scene_args)
-            all_ims.append(img)
+            if i // 6 % 4 == 3:
+                scene_args = pydiffvg.RenderFunction.serialize_scene(canvas_width, canvas_height, pathes, groups)
+                render = pydiffvg.RenderFunction.apply
+                img = render(canvas_width,  # width
+                             canvas_height,  # height
+                             2,  # num_samples_x
+                             2,  # num_samples_y
+                             1,  # seed
+                             None,
+                             *scene_args)
+                all_ims.append(img)
+                pathes = []
+                groups = []
     return torch.cat(all_ims, dim=-1)
 
 
@@ -75,7 +78,7 @@ for epoch in range(100000):
         batch = batch.to(device)
         noise = add_noise(batch, 0.01).to(device)
         new_img = batch + noise
-        png = torch.zeros((batch.shape[0], 64, 64, 4 * N * M)).to(device)
+        png = torch.zeros((batch.shape[0], 64, 64, 4 * N * M // 4)).to(device)
         for i in range(batch.shape[0]):
             png[i] = make_image(new_img[i])
         pred_noise = model(png, new_img, torch.Tensor(1).to(device))

@@ -7,6 +7,7 @@ M = 2 + 6 * M_REAL
 N = 5
 IMG_N = 50
 HIDDEN = 128
+M_DIV = 4
 
 
 class Block(nn.Module):
@@ -51,7 +52,7 @@ class SinusoidalPositionEmbeddings(nn.Module):
 class SimpleDenoiser(nn.Module):
     def __init__(self):
         super().__init__()
-        self.image_channels = 4 * N * ((M - 2) // 6)
+        self.image_channels = 4 * N * ((M - 2) // 6) // M_DIV
         self.input_sz = 64
         self.hidden = 32
 
@@ -90,7 +91,7 @@ class SimpleDenoiser(nn.Module):
         )
 
         self.pngBigger = nn.Sequential(
-            nn.Linear(M_REAL, M)
+            nn.Linear(M_REAL // M_DIV, M)
         )
         self.pngLinear = nn.Sequential(
             nn.Linear(input_sz * input_sz, self.hidden),
@@ -125,7 +126,7 @@ class SimpleDenoiser(nn.Module):
 
         svg = self.svgLinear(svg.reshape(-1, N * M)).reshape(-1, 4 * N * M, 1)
 
-        png = x.reshape(-1, 4 * N, M_REAL, self.input_sz * self.input_sz)
+        png = x.reshape(-1, 4 * N, M_REAL // M_DIV, self.input_sz * self.input_sz)
         png = png.permute(0, 1, 3, 2)
         png = self.pngBigger(png)
         png = png.permute(0, 1, 3, 2)
