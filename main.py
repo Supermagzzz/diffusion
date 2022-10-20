@@ -83,7 +83,7 @@ for epoch in range(100000):
         baseline = (noise - noise * 0).pow(2).sum()
         loss.backward()
         optimizer.step()
-        print(epoch, loss.item(), baseline.item(), loss.item() - baseline.item())
+        print(epoch, loss.item(), baseline.item(), (loss - baseline).item())
     if epoch % 10 == 0:
         torch.save(model.state_dict(), 'model_weights')
         print('saved')

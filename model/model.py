@@ -2,7 +2,8 @@ import torch
 from torch import nn
 import math
 
-M = 2 + 6 * 20
+M_REAL = 20
+M = 2 + 6 * M_REAL
 N = 5
 IMG_N = 50
 HIDDEN = 128
@@ -52,6 +53,7 @@ class SimpleDenoiser(nn.Module):
         super().__init__()
         self.image_channels = 4 * N * ((M - 2) // 6)
         self.input_sz = 64
+        self.hidden = 32
 
         image_channels = self.image_channels
         input_sz = self.input_sz
@@ -66,11 +68,11 @@ class SimpleDenoiser(nn.Module):
             nn.ReLU()
         )
         self.prepareSvg = nn.Sequential(
-            nn.Linear(N * M, image_channels * input_sz * input_sz),
+            nn.Linear(N * M, input_sz * input_sz),
             nn.ReLU()
         )
 
-        self.conv0 = nn.Conv2d(image_channels * 2, down_channels[0], 3, padding=1)
+        self.conv0 = nn.Conv2d(image_channels + 1, down_channels[0], 3, padding=1)
         self.downs = nn.ModuleList(
             [Block(down_channels[i], down_channels[i + 1], time_emb_dim) for i in range(len(down_channels) - 1)]
         )
@@ -83,22 +85,30 @@ class SimpleDenoiser(nn.Module):
         )
 
         self.svgLinear = nn.Sequential(
-            nn.Linear(N * M, input_sz * input_sz * image_channels),
+            nn.Linear(N * M, 4 * N * M),
+            nn.ReLU()
+        )
+
+        self.pngBigger = nn.Sequential(
+            nn.Linear(M_REAL, M)
+        )
+        self.pngLinear = nn.Sequential(
+            nn.Linear(input_sz * input_sz, self.hidden),
             nn.ReLU()
         )
 
         self.linearWithSvg = nn.Sequential(
-            nn.Linear(2 * image_channels * input_sz * input_sz, image_channels * input_sz * input_sz),
+            nn.Linear(4 * N * M * (self.hidden + 1), 4 * N * M),
             nn.ReLU(),
-            nn.Linear(image_channels * input_sz * input_sz, image_channels * input_sz * input_sz),
+            nn.Linear(4 * N * M, N * M),
             nn.ReLU(),
-            nn.Linear(image_channels * input_sz * input_sz, N * M)
+            nn.Linear(N * M, N * M)
         )
 
     def forward(self, x, svg, timestep):
         t = self.time_mlp(timestep)
         prep_svg = self.prepareSvg(svg.reshape(-1, N * M))
-        prep_svg = prep_svg.reshape(-1, self.input_sz, self.input_sz, self.image_channels)
+        prep_svg = prep_svg.reshape(-1, self.input_sz, self.input_sz, 1)
         x = torch.cat((x, prep_svg), dim=-1)
         x = x.permute(0, 3, 1, 2)
         x = self.conv0(x)
@@ -111,7 +121,16 @@ class SimpleDenoiser(nn.Module):
             x = torch.cat((x, residual_x), dim=1)
             x = up(x, t)
         x = self.output(x)
-        x = x.reshape(-1, x.shape[1] * x.shape[2] * x.shape[3])
-        svg = self.svgLinear(svg.reshape(-1, N * M))
-        return self.linearWithSvg(torch.cat([x, svg], -1)).reshape(-1, N, M)
+        x = x.reshape(-1, x.shape[1], x.shape[2] * x.shape[3])
 
+        svg = self.svgLinear(svg.reshape(-1, N * M)).reshape(-1, 4 * N * M, 1)
+
+        png = x.reshape(-1, 4 * N, M_REAL, self.input_sz * self.input_sz)
+        png = png.permute(0, 1, 3, 2)
+        png = self.pngBigger(png)
+        png = png.permute(0, 1, 3, 2)
+        png = self.pngLinear(png)
+        png = png.reshape(-1, 4 * N * M, self.hidden)
+        all = torch.cat([svg, png], dim=-1).reshape(-1, 4 * N * M * (self.hidden + 1))
+
+        return self.linearWithSvg(all).reshape(-1, N, M)
