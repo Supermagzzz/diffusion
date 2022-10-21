@@ -78,8 +78,13 @@ for epoch in range(100000):
         noise = add_noise(batch, noise_level).to(device)
         new_img = batch + noise
         pred_noise = model(new_img, torch.Tensor(1).to(device))
-        loss = (torch.exp(noise - pred_noise).sum() + torch.exp(pred_noise - noise).sum()) / 2 #F.l1_loss(noise, pred_noise)
-        baseline = torch.exp(noise).sum() #F.l1_loss(noise, noise * 0)
+
+        def gloss(a, b):
+            c = a - b
+            return -(torch.log(1 - c) + torch.log(c + 1)).sum()
+
+        loss = gloss(noise, pred_noise)
+        baseline = gloss(noise, noise * 0)
         loss.backward()
         optimizer.step()
         print(epoch, loss.item(), baseline.item(), (loss / baseline).item())

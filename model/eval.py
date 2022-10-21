@@ -47,7 +47,7 @@ def make_image(inp):
 
 def run():
     def add_noise(tensor, mult):
-        return torch.normal(0, 1, size=tensor.shape) * mult
+        return torch.normal(0, mult, size=tensor.shape) - tensor * 0.01
 
     def make_svg(tensor):
         tensor -= torch.min(tensor) - 0.5
@@ -78,16 +78,16 @@ def run():
         return SVG.from_tensor(torch.Tensor(data))
 
 
-    model = SimpleDenoiser()
-    model.load_state_dict(torch.load('../model_weights'))
-    model.eval()
+    # model = SimpleDenoiser(0.03, 'cpu')
+    # model.load_state_dict(torch.load('../model_weights'))
+    # model.eval()
     for i, img in enumerate(dataset):
         if i == 3:
             break
-        noise = add_noise(img, 0.01)
+        noise = add_noise(img, 0.03)
         new_img = img + noise
-        pred_noise = model(make_image(new_img), torch.Tensor(1))
-        make_svg(new_img - pred_noise[0]).save_svg('../trash/' + 'test' + str(i) + '.svg')
+        # pred_noise = model(new_img, torch.Tensor(1))
+        # make_svg(new_img - pred_noise[0]).save_svg('../trash/' + 'test' + str(i) + '.svg')
         make_svg(img).save_svg('../trash/' + 'real' + str(i) + '.svg')
         make_svg(new_img).save_svg('../trash/' + 'inp' + str(i) + '.svg')
 run()
