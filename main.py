@@ -67,7 +67,7 @@ def make_image(inp):
 model = SimpleDenoiser(noise_level, device)
 print(device)
 model.to(device)
-optimizer = Adam(model.parameters(), lr=0.0001)
+optimizer = Adam(model.parameters(), lr=0.00001)
 new_img, noise = None, None
 for epoch in range(100000):
     for step, batch in enumerate(dataloader):
