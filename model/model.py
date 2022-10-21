@@ -67,10 +67,11 @@ class SimpleDenoiser(nn.Module):
         )
         self.make_noise_result = nn.Sequential(
             nn.Linear(BLOCKS, HIDDEN),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.Linear(HIDDEN, HIDDEN),
-            nn.ReLU(),
+            nn.Tanh(),
             nn.Linear(HIDDEN, 1),
+            nn.Sigmoid()
         )
 
         # self.make_coords = nn.Sequential(
@@ -135,13 +136,10 @@ class SimpleDenoiser(nn.Module):
 
     def forward(self, svg, timestep):
         batch_size = svg.shape[0]
-        svg = svg.reshape(batch_size, N * M)
-        svg = torch.clamp((svg + 1) / 2 * BLOCKS, 0, BLOCKS - 1)
+        svg = svg.reshape(batch_size, N * M // 6, 6)
+        svg = torch.clamp((svg + 1) / 2 * BLOCKS, 0, BLOCKS - 1).long()
 
-        coords = torch.zeros((batch_size, N * M // 6, 6, BLOCKS)).to(self.device)
-        for b in range(batch_size):
-            for i in range(N * M):
-                coords[b][i // 6][i % 6][svg[b][i].long()] = 1
+        coords = F.one_hot(svg, BLOCKS).float()
         coords = torch.matmul(coords, self.w_x)
         coords = coords.reshape(batch_size, N * M // 6, HIDDEN * 6)
         embeds = torch.matmul(coords, self.w_coords)
@@ -150,7 +148,7 @@ class SimpleDenoiser(nn.Module):
         coord_embed = coord_embed.reshape(batch_size, N * M, HIDDEN)
         bin_probs = torch.softmax(torch.matmul(coord_embed, self.w_x.permute(1, 0)), dim=-1)
         noise_result = self.make_noise_result(bin_probs)
-        return noise_result.reshape(batch_size, N, M)
+        return noise_result.reshape(batch_size, N, M) - 1
 
         # t = self.time_mlp(timestep)
         # prep_svg = self.prepareSvg(svg.reshape(-1, N * M))

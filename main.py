@@ -16,7 +16,7 @@ noise_level = 0.003
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 dataset = CustomImageDataset('data/tensors')
-dataloader = DataLoader(dataset, batch_size=1 if device == "cpu" else 64, shuffle=False, drop_last=True)
+dataloader = DataLoader(dataset, batch_size=8 if device == "cpu" else 64, shuffle=False, drop_last=True)
 
 
 def add_noise(tensor, mult):
@@ -77,7 +77,7 @@ for epoch in range(100000):
         noise = add_noise(batch, noise_level).to(device)
         new_img = batch + noise
         pred_noise = model(new_img, torch.Tensor(1).to(device))
-        loss = l1_loss(batch, pred_noise)
+        loss = l1_loss(noise, pred_noise)
         baseline = l1_loss(batch, new_img)
         loss.backward()
         optimizer.step()
