@@ -55,22 +55,22 @@ class SimpleDenoiser(nn.Module):
     def __init__(self, noise_level, device):
         super().__init__()
         self.device = device
-        self.w_x = nn.Parameter(torch.empty(BLOCKS, HIDDEN))
-        self.w_coords = nn.Parameter(torch.empty(HIDDEN * 6, HIDDEN))
+        self.w_x = nn.Parameter(torch.empty(BLOCKS, HIDDEN), requires_grad=True).to('cpu')
+        self.w_coords = nn.Parameter(torch.empty(HIDDEN * 6, HIDDEN), requires_grad=True)
         self.transformer = nn.Transformer(d_model=HIDDEN, dtype=torch.float)
         self.make_coord_embed = nn.Sequential(
-            nn.Linear(HIDDEN, HIDDEN * 6),
-            nn.ReLU(),
-            nn.Linear(HIDDEN * 6, HIDDEN * 6),
-            nn.ReLU(),
-            nn.Linear(HIDDEN * 6, HIDDEN * 6),
+            nn.Linear(HIDDEN, HIDDEN * 6).to(device),
+            nn.ReLU().to(device),
+            nn.Linear(HIDDEN * 6, HIDDEN * 6).to(device),
+            nn.ReLU().to(device),
+            nn.Linear(HIDDEN * 6, HIDDEN * 6).to(device),
         )
         self.make_noise_result = nn.Sequential(
-            nn.Linear(HIDDEN, HIDDEN),
-            nn.ReLU(),
-            nn.Linear(HIDDEN, HIDDEN),
-            nn.Tanh(),
-            nn.Linear(HIDDEN, 1)
+            nn.Linear(HIDDEN, HIDDEN).to(device),
+            nn.ReLU().to(device),
+            nn.Linear(HIDDEN, HIDDEN).to(device),
+            nn.Tanh().to(device),
+            nn.Linear(HIDDEN, 1).to(device)
         )
 
         # self.make_coords = nn.Sequential(
@@ -134,9 +134,9 @@ class SimpleDenoiser(nn.Module):
         # )
 
         self.t = nn.Sequential(
-            nn.Linear(HIDDEN, HIDDEN),
-            nn.ReLU(),
-            nn.Linear(HIDDEN, 6)
+            nn.Linear(HIDDEN, HIDDEN).to(device),
+            nn.ReLU().to(device),
+            nn.Linear(HIDDEN, 6).to(device)
         )
 
 
