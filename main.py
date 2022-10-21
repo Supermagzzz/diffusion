@@ -14,12 +14,12 @@ from dataset.dataloader import CustomImageDataset
 from torch.utils.data import DataLoader
 from model.model import SimpleDenoiser
 
-torch.set_default_dtype(torch.float)
+torch.set_default_dtype(torch.float32)
 noise_level = 0.03
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 dataset = CustomImageDataset('data/tensors')
-dataloader = DataLoader(dataset, batch_size=100 if device == "cpu" else 100, shuffle=False, drop_last=True)
+dataloader = DataLoader(dataset, batch_size=1 if device == "cpu" else 100, shuffle=False, drop_last=True)
 
 
 def add_noise(tensor, mult):
@@ -70,7 +70,7 @@ def make_image(inp):
 model = SimpleDenoiser(noise_level, device)
 print(device)
 model.to(device)
-optimizer = torch.optim.AdamW(model.parameters(), lr=0.0001)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
 new_img, noise = None, None
 for epoch in range(100000):
     for step, batch in enumerate(dataloader):
@@ -83,7 +83,7 @@ for epoch in range(100000):
         pred_noise = model(noise, torch.Tensor(1).to(device))
 
         def gloss(a, b):
-            return F.l1_loss(a, b)
+            return (a - b).pow(2).sum()
 
         loss = gloss(noise, pred_noise)
         baseline = gloss(noise, noise * 0)
