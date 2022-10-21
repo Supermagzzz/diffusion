@@ -137,7 +137,7 @@ class SimpleDenoiser(nn.Module):
         self.t = nn.Sequential(
             nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(128, 1)
+            nn.Linear(128, 6)
         )
 
     def forward(self, svg, timestep):
@@ -145,11 +145,9 @@ class SimpleDenoiser(nn.Module):
         svg = svg.reshape(batch_size, N * M // 6, 6)
         svg = torch.clamp((svg + 1) / 2 * BLOCKS, 0, BLOCKS - 1).long()
         coords = F.embedding(svg.to('cpu'), self.w_x).to(self.device)
-        coords = self.t(coords)
-        return coords.reshape(-1, N, M)
-
         coords = coords.reshape(batch_size, N * M // 6, HIDDEN * 6)
         embeds = torch.matmul(coords, self.w_coords)
+        return self.t(embeds).reshape(-1, N, M)
         noise_embeds = self.transformer(embeds, embeds)
         coord_embed = self.make_coord_embed(noise_embeds)
         coord_embed = coord_embed.reshape(batch_size, N * M, HIDDEN)
