@@ -70,7 +70,7 @@ def make_image(inp):
 model = SimpleDenoiser(noise_level, device)
 print(device)
 model.to(device)
-optimizer = Adam(model.parameters(), lr=0.001)
+optimizer = Adam(model.parameters(), lr=0.0001)
 new_img, noise = None, None
 for epoch in range(100000):
     for step, batch in enumerate(dataloader):
@@ -83,8 +83,7 @@ for epoch in range(100000):
         pred_noise = model(noise, torch.Tensor(1).to(device))
 
         def gloss(a, b):
-            c = a - b
-            return -(torch.log(1 - c) + torch.log(c + 1)).sum()
+            return F.l1_loss(a, b)
 
         loss = gloss(noise, pred_noise)
         baseline = gloss(noise, noise * 0)
