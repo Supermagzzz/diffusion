@@ -3,7 +3,7 @@ from torch import nn
 import math
 
 M_REAL = 20
-M = 2 + 6 * M_REAL
+M = 6 + 6 * M_REAL
 N = 5
 IMG_N = 50
 HIDDEN = 128
@@ -53,14 +53,30 @@ class SinusoidalPositionEmbeddings(nn.Module):
 class SimpleDenoiser(nn.Module):
     def __init__(self, noise_level, device):
         super().__init__()
-        self.in_embeddings = nn.Embedding(BLOCKS, HIDDEN)
-        self.out_embeddings = nn.Embedding(BLOCKS, HIDDEN)
+        self.device = device
+        self.w_x = torch.rand((BLOCKS, HIDDEN), requires_grad=True).to(device)
+        self.w_coords = torch.rand((HIDDEN * 6, HIDDEN), requires_grad=True).to(device)
         self.transformer = nn.Transformer(d_model=HIDDEN)
-        self.make_coords = nn.Sequential(
-            nn.Linear(HIDDEN, 2 * BLOCKS),
-            nn.Softmax(),
-            nn.Linear(2 * BLOCKS, 1),
+        self.make_coord_embed = nn.Sequential(
+            nn.Linear(HIDDEN, HIDDEN * 6),
+            nn.ReLU(),
+            nn.Linear(HIDDEN * 6, HIDDEN * 6),
+            nn.ReLU(),
+            nn.Linear(HIDDEN * 6, HIDDEN * 6),
         )
+        self.make_noise_result = nn.Sequential(
+            nn.Linear(BLOCKS, HIDDEN),
+            nn.ReLU(),
+            nn.Linear(HIDDEN, HIDDEN),
+            nn.ReLU(),
+            nn.Linear(HIDDEN, 1),
+        )
+
+        # self.make_coords = nn.Sequential(
+        #     nn.Linear(HIDDEN, 2 * BLOCKS),
+        #     nn.Softmax(dim=1),
+        #     nn.Linear(2 * BLOCKS, 1),
+        # )
 
         # self.image_channels = 4 * N * ((M - 2) // 6) // M_DIV
         # self.input_sz = 64
@@ -117,12 +133,22 @@ class SimpleDenoiser(nn.Module):
         # )
 
     def forward(self, svg, timestep):
-        svg = svg.reshape(-1, N * M)
-        in_embeds = self.in_embeddings(torch.clamp((((svg + 1) / 2) * BLOCKS).long(), 0, BLOCKS - 1))
-        out_embeds = self.out_embeddings(torch.clamp((((svg + 1) / 2) * BLOCKS).long(), 0, BLOCKS - 1))
-        svg_embeds = self.transformer(in_embeds, out_embeds)
-        svg_coords = self.make_coords(svg_embeds)
-        return svg_coords.reshape(-1, N, M)
+        batch_size = svg.shape[0]
+        svg = svg.reshape(batch_size, N * M)
+        svg = torch.clamp((svg + 1) / 2 * BLOCKS, 0, BLOCKS - 1)
+        coords = torch.zeros((batch_size, N * M // 6, 6, BLOCKS)).to(self.device)
+        for b in range(batch_size):
+            for i in range(N * M):
+                coords[b][i // 6][i % 6][svg[b][i].long()] = 1
+        coords = torch.matmul(coords, self.w_x)
+        coords = coords.reshape(batch_size, N * M // 6, HIDDEN * 6)
+        embeds = torch.matmul(coords, self.w_coords)
+        noise_embeds = self.transformer(embeds, embeds)
+        coord_embed = self.make_coord_embed(noise_embeds)
+        coord_embed = coord_embed.reshape(batch_size, N * M, HIDDEN)
+        bin_probs = torch.softmax(torch.matmul(coord_embed, self.w_x.permute(1, 0)), dim=-1)
+        noise_result = self.make_noise_result(bin_probs)
+        return noise_result.reshape(batch_size, N, M)
 
         # t = self.time_mlp(timestep)
         # prep_svg = self.prepareSvg(svg.reshape(-1, N * M))

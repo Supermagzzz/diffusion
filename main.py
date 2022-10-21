@@ -74,6 +74,7 @@ optimizer = Adam(model.parameters(), lr=0.0001)
 new_img, noise = None, None
 for epoch in range(100000):
     for step, batch in enumerate(dataloader):
+        batch = torch.cat([batch, batch[:, :, -2:], batch[:, :, -2:]], dim=-1)
         optimizer.zero_grad()
         batch = batch.to(device)
         noise = add_noise(batch, noise_level).to(device)
