@@ -68,8 +68,9 @@ def make_image(inp):
 
 
 model = SimpleDenoiser(noise_level, device)
-print(device)
 model.to(device)
+model.w_x.to('cpu')
+print(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
 new_img, noise = None, None
 for epoch in range(100000):
