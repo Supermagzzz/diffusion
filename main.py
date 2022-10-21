@@ -12,8 +12,11 @@ from dataset.dataloader import CustomImageDataset
 from torch.utils.data import DataLoader
 from model.model import SimpleDenoiser
 
+noise_level = 0.003
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
 dataset = CustomImageDataset('data/tensors')
-dataloader = DataLoader(dataset, batch_size=1, shuffle=False, drop_last=True)
+dataloader = DataLoader(dataset, batch_size=1 if device == "cpu" else 64, shuffle=False, drop_last=True)
 
 
 def add_noise(tensor, mult):
@@ -61,9 +64,6 @@ def make_image(inp):
     return img
 
 
-torch.autograd.set_detect_anomaly(True)
-noise_level = 0.003
-device = "cuda" if torch.cuda.is_available() else "cpu"
 model = SimpleDenoiser(noise_level, device)
 print(device)
 model.to(device)
@@ -76,18 +76,9 @@ for epoch in range(100000):
         batch = batch.to(device)
         noise = add_noise(batch, noise_level).to(device)
         new_img = batch + noise
-        png = torch.zeros((batch.shape[0], 64, 64, 4)).to(device)
-        for i in range(batch.shape[0]):
-            png[i] = make_image(new_img[i])
-        base_png = torch.zeros((batch.shape[0], 64, 64, 4)).to(device)
-        for i in range(batch.shape[0]):
-            base_png[i] = make_image(batch[i])
         pred_noise = model(new_img, torch.Tensor(1).to(device))
-        res_png = torch.zeros((batch.shape[0], 64, 64, 4)).to(device)
-        for i in range(batch.shape[0]):
-            res_png[i] = make_image(new_img[i] - pred_noise[i])
-        loss = l1_loss(noise, pred_noise) + l1_loss(res_png, base_png) / 10
-        baseline = l1_loss(noise, noise * 0) + l1_loss(png, base_png) / 10
+        loss = l1_loss(batch, pred_noise)
+        baseline = l1_loss(batch, new_img)
         loss.backward()
         optimizer.step()
         print(epoch, loss.item(), baseline.item(), (loss / baseline).item())

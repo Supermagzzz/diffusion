@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 import math
 
 M_REAL = 20
@@ -136,6 +137,7 @@ class SimpleDenoiser(nn.Module):
         batch_size = svg.shape[0]
         svg = svg.reshape(batch_size, N * M)
         svg = torch.clamp((svg + 1) / 2 * BLOCKS, 0, BLOCKS - 1)
+
         coords = torch.zeros((batch_size, N * M // 6, 6, BLOCKS)).to(self.device)
         for b in range(batch_size):
             for i in range(N * M):
