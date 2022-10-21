@@ -13,7 +13,7 @@ from dataset.dataloader import CustomImageDataset
 from torch.utils.data import DataLoader
 from model.model import SimpleDenoiser
 
-noise_level = 0.003
+noise_level = 0.03
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 dataset = CustomImageDataset('data/tensors')
@@ -21,7 +21,7 @@ dataloader = DataLoader(dataset, batch_size=8 if device == "cpu" else 64, shuffl
 
 
 def add_noise(tensor, mult):
-    return torch.normal(0, 1, size=tensor.shape) * mult - tensor * 0.01
+    return torch.normal(0, mult, size=tensor.shape).to(device) - tensor * 0.01
 
 N = 5
 M = 20
