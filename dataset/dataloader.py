@@ -6,7 +6,7 @@ import pickle
 
 class CustomImageDataset(Dataset):
     def __init__(self, img_dir, transform=None, target_transform=None):
-        self.images = os.listdir(img_dir)
+        self.images = os.listdir(img_dir)[:500]
         self.img_dir = img_dir
         self.transform = transform
         self.target_transform = target_transform
