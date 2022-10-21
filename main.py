@@ -33,7 +33,7 @@ def make_image(inp):
     pathes = []
     groups = []
     for j, row in enumerate(el):
-        for i in range(2, row.shape[0], 6):
+        for i in range(6, row.shape[0], 6):
             num_control_points = []
             points = []
             num_control_points.append(2)
@@ -46,22 +46,19 @@ def make_image(inp):
             points.append(i + 4)
             points.append(i + 5)
             points = row[points].reshape(-1, 2)
-            pathes.append(pydiffvg.Path(torch.Tensor(num_control_points).to(device), points, False))
-            groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([len(groups)]).to(device), fill_color=None,
-                                              stroke_color=torch.Tensor([0, 0, 0, 1]).to(device)))
-            scene_args = pydiffvg.RenderFunction.serialize_scene(canvas_width, canvas_height, pathes, groups)
-            render = pydiffvg.RenderFunction.apply
-            img = render(canvas_width,  # width
-                         canvas_height,  # height
-                         2,  # num_samples_x
-                         2,  # num_samples_y
-                         1,  # seed
-                         None,
-                         *scene_args)
-            all_ims.append(img)
-            pathes = []
-            groups = []
-    return torch.cat(all_ims, dim=-1)
+        pathes.append(pydiffvg.Path(torch.Tensor(num_control_points).to(device), points, False))
+        groups.append(pydiffvg.ShapeGroup(shape_ids=torch.tensor([len(groups)]).to(device), fill_color=None,
+                                          stroke_color=torch.Tensor([0, 0, 0, 1]).to(device)))
+    scene_args = pydiffvg.RenderFunction.serialize_scene(canvas_width, canvas_height, pathes, groups)
+    render = pydiffvg.RenderFunction.apply
+    img = render(canvas_width,  # width
+                 canvas_height,  # height
+                 2,  # num_samples_x
+                 2,  # num_samples_y
+                 1,  # seed
+                 None,
+                 *scene_args)
+    return img
 
 
 torch.autograd.set_detect_anomaly(True)
@@ -79,12 +76,18 @@ for epoch in range(100000):
         batch = batch.to(device)
         noise = add_noise(batch, noise_level).to(device)
         new_img = batch + noise
-        # png = torch.zeros((batch.shape[0], 64, 64, 4 * N * M)).to(device)
-        # for i in range(batch.shape[0]):
-        #     png[i] = make_image(new_img[i])
+        png = torch.zeros((batch.shape[0], 64, 64, 4)).to(device)
+        for i in range(batch.shape[0]):
+            png[i] = make_image(new_img[i])
+        base_png = torch.zeros((batch.shape[0], 64, 64, 4)).to(device)
+        for i in range(batch.shape[0]):
+            base_png[i] = make_image(batch[i])
         pred_noise = model(new_img, torch.Tensor(1).to(device))
-        loss = l1_loss(noise, pred_noise)
-        baseline = l1_loss(noise, noise * 0)
+        res_png = torch.zeros((batch.shape[0], 64, 64, 4)).to(device)
+        for i in range(batch.shape[0]):
+            res_png[i] = make_image(new_img[i] - pred_noise[i])
+        loss = l1_loss(noise, pred_noise) + l1_loss(res_png, base_png) / 10
+        baseline = l1_loss(noise, noise * 0) + l1_loss(png, base_png) / 10
         loss.backward()
         optimizer.step()
         print(epoch, loss.item(), baseline.item(), (loss / baseline).item())
