@@ -55,8 +55,8 @@ class SimpleDenoiser(nn.Module):
     def __init__(self, noise_level, device):
         super().__init__()
         self.device = device
-        self.w_x = torch.rand((BLOCKS, HIDDEN), requires_grad=True).to('cpu')
-        self.w_coords = torch.rand((HIDDEN * 6, HIDDEN), requires_grad=True).to(device)
+        self.w_x = nn.Parameter(torch.empty(BLOCKS, HIDDEN)).to('cpu')
+        self.w_coords = nn.Parameter(torch.empty(HIDDEN * 6, HIDDEN)).to(device)
         self.transformer = nn.Transformer(d_model=HIDDEN, dtype=torch.float)
         self.make_coord_embed = nn.Sequential(
             nn.Linear(HIDDEN, HIDDEN * 6),

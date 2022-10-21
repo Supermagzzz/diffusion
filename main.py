@@ -19,7 +19,7 @@ noise_level = 0.03
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 dataset = CustomImageDataset('data/tensors')
-dataloader = DataLoader(dataset, batch_size=1 if device == "cpu" else 100, shuffle=False, drop_last=True)
+dataloader = DataLoader(dataset, batch_size=100 if device == "cpu" else 100, shuffle=False, drop_last=True)
 
 
 def add_noise(tensor, mult):
