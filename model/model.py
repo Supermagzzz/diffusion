@@ -66,7 +66,7 @@ class SimpleDenoiser(nn.Module):
             nn.Linear(HIDDEN * 6, HIDDEN * 6),
         )
         self.make_noise_result = nn.Sequential(
-            nn.Linear(BLOCKS, HIDDEN),
+            nn.Linear(HIDDEN * 6, HIDDEN),
             nn.ReLU(),
             nn.Linear(HIDDEN, HIDDEN),
             nn.Tanh(),
@@ -149,8 +149,8 @@ class SimpleDenoiser(nn.Module):
         noise_embeds = self.transformer(embeds, embeds)
         coord_embed = self.make_coord_embed(noise_embeds)
         coord_embed = coord_embed.reshape(batch_size, N * M, HIDDEN)
-        bin_probs = torch.softmax(torch.matmul(coord_embed.to('cpu'), self.w_x.permute(1, 0)), dim=-1).to(self.device)
-        noise_result = self.make_noise_result(bin_probs)
+        # bin_probs = torch.softmax(torch.matmul(coord_embed.to('cpu'), self.w_x.permute(1, 0)), dim=-1).to(self.device)
+        noise_result = self.make_noise_result(coord_embed)
         return noise_result.reshape(batch_size, N, M)
 
         # t = self.time_mlp(timestep)
