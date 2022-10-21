@@ -1,6 +1,7 @@
 import math
 import sys
-sys.path.append('/Users/maxim-kuzin/ml/pythonProject/diffvg')
+
+from deepsvg.svglib.svg import SVG
 
 import pydiffvg
 import torch
@@ -13,11 +14,12 @@ from dataset.dataloader import CustomImageDataset
 from torch.utils.data import DataLoader
 from model.model import SimpleDenoiser
 
+torch.set_default_dtype(torch.float)
 noise_level = 0.03
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 dataset = CustomImageDataset('data/tensors')
-dataloader = DataLoader(dataset, batch_size=8 if device == "cpu" else 64, shuffle=False, drop_last=True)
+dataloader = DataLoader(dataset, batch_size=1 if device == "cpu" else 64, shuffle=False, drop_last=True)
 
 
 def add_noise(tensor, mult):
@@ -68,16 +70,17 @@ def make_image(inp):
 model = SimpleDenoiser(noise_level, device)
 print(device)
 model.to(device)
-optimizer = Adam(model.parameters(), lr=0.00001)
+optimizer = Adam(model.parameters(), lr=0.001)
 new_img, noise = None, None
 for epoch in range(100000):
     for step, batch in enumerate(dataloader):
         batch = torch.cat([batch, batch[:, :, -2:], batch[:, :, -2:]], dim=-1)
+        batch = batch[:, 0:1, :]
         optimizer.zero_grad()
         batch = batch.to(device)
         noise = add_noise(batch, noise_level).to(device)
         new_img = batch + noise
-        pred_noise = model(new_img, torch.Tensor(1).to(device))
+        pred_noise = model(noise, torch.Tensor(1).to(device))
 
         def gloss(a, b):
             c = a - b

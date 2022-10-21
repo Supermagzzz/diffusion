@@ -5,7 +5,7 @@ import math
 
 M_REAL = 20
 M = 6 + 6 * M_REAL
-N = 5
+N = 1
 IMG_N = 50
 HIDDEN = 128
 M_DIV = 1
@@ -55,9 +55,9 @@ class SimpleDenoiser(nn.Module):
     def __init__(self, noise_level, device):
         super().__init__()
         self.device = device
-        self.w_x = torch.rand((BLOCKS, HIDDEN), requires_grad=True).to(device)
+        self.w_x = torch.rand((BLOCKS, HIDDEN), requires_grad=True, dtype=torch.float16).to('cpu')
         self.w_coords = torch.rand((HIDDEN * 6, HIDDEN), requires_grad=True).to(device)
-        self.transformer = nn.Transformer(d_model=HIDDEN)
+        self.transformer = nn.Transformer(d_model=HIDDEN, dtype=torch.float)
         self.make_coord_embed = nn.Sequential(
             nn.Linear(HIDDEN, HIDDEN * 6),
             nn.ReLU(),
@@ -71,6 +71,11 @@ class SimpleDenoiser(nn.Module):
             nn.Linear(HIDDEN, HIDDEN),
             nn.Tanh(),
             nn.Linear(HIDDEN, 1)
+        )
+        self.t = nn.Sequential(
+            nn.Linear(N * M, N * M),
+            nn.ReLU(),
+            nn.Linear(N * M, N * M)
         )
 
         # self.make_coords = nn.Sequential(
@@ -138,14 +143,14 @@ class SimpleDenoiser(nn.Module):
         svg = svg.reshape(batch_size, N * M // 6, 6)
         svg = torch.clamp((svg + 1) / 2 * BLOCKS, 0, BLOCKS - 1).long()
 
-        coords = F.one_hot(svg, BLOCKS).float()
-        coords = torch.matmul(coords, self.w_x)
+        coords = F.one_hot(svg, BLOCKS)
+        coords = torch.matmul(coords.half(), self.w_x).float()
         coords = coords.reshape(batch_size, N * M // 6, HIDDEN * 6)
         embeds = torch.matmul(coords, self.w_coords)
         noise_embeds = self.transformer(embeds, embeds)
         coord_embed = self.make_coord_embed(noise_embeds)
         coord_embed = coord_embed.reshape(batch_size, N * M, HIDDEN)
-        bin_probs = torch.softmax(torch.matmul(coord_embed, self.w_x.permute(1, 0)), dim=-1)
+        bin_probs = torch.softmax(torch.matmul(coord_embed.half(), self.w_x.permute(1, 0)).float(), dim=-1)
         noise_result = self.make_noise_result(bin_probs)
         return noise_result.reshape(batch_size, N, M)
 
