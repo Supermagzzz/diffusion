@@ -6,6 +6,7 @@ import pydiffvg
 import torch
 import numpy as np
 from torch.optim import Adam
+import torch.nn.functional as F
 from torch.nn.functional import l1_loss
 
 from dataset.dataloader import CustomImageDataset
@@ -20,7 +21,7 @@ dataloader = DataLoader(dataset, batch_size=8 if device == "cpu" else 64, shuffl
 
 
 def add_noise(tensor, mult):
-    return torch.normal(0, 1, size=tensor.shape) * mult
+    return torch.normal(0, 1, size=tensor.shape) * mult - tensor * 0.01
 
 N = 5
 M = 20
@@ -77,8 +78,8 @@ for epoch in range(100000):
         noise = add_noise(batch, noise_level).to(device)
         new_img = batch + noise
         pred_noise = model(new_img, torch.Tensor(1).to(device))
-        loss = l1_loss(noise, pred_noise)
-        baseline = l1_loss(batch, new_img)
+        loss = (torch.exp(noise - pred_noise).sum() + torch.exp(pred_noise - noise).sum()) / 2 #F.l1_loss(noise, pred_noise)
+        baseline = torch.exp(noise).sum() #F.l1_loss(noise, noise * 0)
         loss.backward()
         optimizer.step()
         print(epoch, loss.item(), baseline.item(), (loss / baseline).item())
