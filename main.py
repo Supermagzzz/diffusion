@@ -19,7 +19,7 @@ noise_level = 0.03
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 dataset = CustomImageDataset('data/tensors')
-dataloader = DataLoader(dataset, batch_size=1 if device == "cpu" else 512, shuffle=False, drop_last=True)
+dataloader = DataLoader(dataset, batch_size=100 if device == "cpu" else 100, shuffle=False, drop_last=True)
 
 
 def add_noise(tensor, mult):
@@ -70,7 +70,7 @@ def make_image(inp):
 model = SimpleDenoiser(noise_level, device)
 print(device)
 model.to(device)
-optimizer = Adam(model.parameters(), lr=0.0001)
+optimizer = torch.optim.AdamW(model.parameters(), lr=0.0001)
 new_img, noise = None, None
 for epoch in range(100000):
     for step, batch in enumerate(dataloader):
