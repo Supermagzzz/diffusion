@@ -7,7 +7,7 @@ from model.model import SimpleDenoiser
 torch.set_default_dtype(torch.float32)
 noise_level = 0.03
 know_level = 0.01
-batch_sz = 5
+batch_sz = 100
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 dataset = CustomImageDataset('data/tensors')
