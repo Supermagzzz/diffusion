@@ -29,12 +29,10 @@ new_img, noise = None, None
 for epoch in range(100000):
     for step, batch in enumerate(dataloader):
         batch = torch.cat([batch[:, :, :2], batch[:, :, :2], batch], dim=-1)
-        for i in range(batch.shape[0]):
-            batch[i, :, :] = i
         optimizer.zero_grad()
         batch = batch.to(device)
         noise = add_noise(batch, noise_level).to(device)
-        new_img = batch# + noise
+        new_img = batch + noise
         pred_noise = model(new_img, torch.Tensor(1).to(device))
 
         def gloss(a, b):
