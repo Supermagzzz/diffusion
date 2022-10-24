@@ -50,8 +50,6 @@ def make_svg(tensor):
             command[-3] = row[i + 3]
             command[-2] = row[i + 4]
             command[-1] = row[i + 5]
-            if (lastX - command[-2]) ** 2 + (lastY - command[-1]) ** 2 < 0.1:
-                continue
             lastX, lastY = command[-2], command[-1]
             data.append(command)
     return SVG.from_tensor(torch.Tensor(data))

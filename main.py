@@ -7,7 +7,7 @@ from model.model import SimpleDenoiser
 torch.set_default_dtype(torch.float32)
 noise_level = 0.03
 know_level = 0.01
-batch_sz = 100
+batch_sz = 5
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 dataset = CustomImageDataset('data/tensors')
@@ -29,11 +29,13 @@ new_img, noise = None, None
 for epoch in range(100000):
     for step, batch in enumerate(dataloader):
         batch = torch.cat([batch[:, :, :2], batch[:, :, :2], batch], dim=-1)
+        for i in range(batch.shape[0]):
+            batch[i, :, :] = i
         optimizer.zero_grad()
         batch = batch.to(device)
         noise = add_noise(batch, noise_level).to(device)
-        new_img = batch + noise
-        pred_noise = model(noise, torch.Tensor(1).to(device))
+        new_img = batch# + noise
+        pred_noise = model(new_img, torch.Tensor(1).to(device))
 
         def gloss(a, b):
             return (a - b).pow(2).sum()

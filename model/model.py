@@ -33,7 +33,7 @@ class SimpleDenoiser(nn.Module):
         self.device = device
         self.w_x = nn.Parameter(torch.normal(0, 1, (BLOCKS * 6, HIDDEN)), requires_grad=True).to('cpu')
         self.w_coords = nn.Parameter(torch.normal(0, 1, (HIDDEN * 6, HIDDEN)), requires_grad=True)
-        self.transformer = nn.Transformer(d_model=HIDDEN, dtype=torch.float)
+        self.transformer = nn.Transformer(d_model=HIDDEN, dtype=torch.float, batch_first=True)
         self.make_coord_embed = nn.Sequential(
             nn.Linear(HIDDEN, HIDDEN * 6).to(device),
             nn.ReLU().to(device),
