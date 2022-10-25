@@ -1,49 +1,111 @@
 import torch
 
-from dataset.dataloader import CustomImageDataset
-from torch.utils.data import DataLoader
 from model.model import SimpleDenoiser
+from common import Common
+import imageio.v2 as imageio
+import matplotlib.pyplot as plt
+import torch.nn.functional as F
 
 torch.set_default_dtype(torch.float32)
-noise_level = 0.03
-know_level = 0.01
-batch_sz = 100
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
-dataset = CustomImageDataset('data/tensors')
-dataloader = DataLoader(dataset, batch_size=batch_sz if device == "cpu" else batch_sz, shuffle=False, drop_last=True)
 
 
-def add_noise(tensor, mult):
-    return torch.normal(0, mult, size=tensor.shape).to(device) - tensor * know_level
+def linear_beta_schedule(timesteps, start=0.0001, end=0.02):
+    return torch.linspace(start, end, timesteps)
 
 
-N = 5
-M = 8
+T = 300
+betas = linear_beta_schedule(timesteps=T)
+alphas = 1. - betas
+alphas_cumprod = torch.cumprod(alphas, dim=0)
+alphas_cumprod_prev = F.pad(alphas_cumprod[:-1], (1, 0), value=1.0)
+sqrt_recip_alphas = torch.sqrt(1.0 / alphas)
+sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
+sqrt_one_minus_alphas_cumprod = torch.sqrt(1. - alphas_cumprod)
+posterior_variance = betas * (1. - alphas_cumprod_prev) / (1. - alphas_cumprod)
 
-model = SimpleDenoiser(noise_level, device)
-model.to(device)
-print(device)
+
+def get_index_from_list(vals, t, x_shape):
+    batch_size = t.shape[0]
+    out = vals.gather(-1, t.cpu())
+    return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
+
+
+def forward_diffusion_sample(x_0, t, device="cpu"):
+    noise = torch.randn_like(x_0)
+    sqrt_alphas_cumprod_t = get_index_from_list(sqrt_alphas_cumprod, t, x_0.shape)
+    sqrt_one_minus_alphas_cumprod_t = get_index_from_list(
+        sqrt_one_minus_alphas_cumprod, t, x_0.shape
+    )
+    # mean + variance
+    return sqrt_alphas_cumprod_t.to(device) * x_0.to(device) \
+        + sqrt_one_minus_alphas_cumprod_t.to(device) * noise.to(device), noise.to(device)
+
+
+common = Common()
+
+model = SimpleDenoiser(common.device)
+model.to(common.device)
+print(common.device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
-new_img, noise = None, None
+
+@torch.no_grad()
+def sample_timestep(x, t):
+    betas_t = get_index_from_list(betas, t, x.shape)
+    sqrt_one_minus_alphas_cumprod_t = get_index_from_list(
+        sqrt_one_minus_alphas_cumprod, t, x.shape
+    )
+    sqrt_recip_alphas_t = get_index_from_list(sqrt_recip_alphas, t, x.shape)
+
+    model_mean = sqrt_recip_alphas_t * (
+            x - betas_t * model(x, t) / sqrt_one_minus_alphas_cumprod_t
+    )
+    posterior_variance_t = get_index_from_list(posterior_variance, t, x.shape)
+
+    if t == 0:
+        return model_mean
+    else:
+        noise = torch.randn_like(x)
+        return model_mean + torch.sqrt(posterior_variance_t) * noise
+
+
+def print_example(data, index):
+    plt.figure(figsize=(15, 3))
+    for i in range(len(data)):
+        path = 'tmp/' + str(i) + '.png'
+        common.make_svg(data[i]).save_png(path)
+        im = imageio.imread(path)
+        plt.subplot(1, len(data), i + 1)
+        plt.imshow(im)
+    plt.savefig('trash/plt' + str(index))
+
+
 for epoch in range(100000):
-    for step, batch in enumerate(dataloader):
-        batch = torch.cat([batch[:, :, :2], batch[:, :, :2], batch], dim=-1)
+    for step, batch in enumerate(common.dataloader):
+        real = common.make_sample(batch)
         optimizer.zero_grad()
-        batch = batch.to(device)
-        noise = add_noise(batch, noise_level).to(device)
-        new_img = batch + noise
-        pred_noise = model(new_img, torch.Tensor(1).to(device))
 
-        def gloss(a, b):
-            return (a - b).pow(2).sum()
+        t = torch.randint(0, T, (batch.shape[0],), device=common.device).long()
+        noised, noise = forward_diffusion_sample(real, t, common.device)
 
-        loss = gloss(noise, pred_noise)
-        baseline = gloss(noise, -batch * know_level)
+        pred_noise = model(noised, t)
+
+        loss = common.calc_loss(noise, pred_noise)
+        baseline = common.calc_loss(noise, -real * common.know_level)
+
         loss.backward()
         optimizer.step()
         print(epoch, loss.item(), baseline.item(), (loss / baseline).item())
-    if epoch % 10 == 0:
+
+    if epoch % 100 == 0:
+        img = torch.randn((1, common.N, common.M_REAL), device=common.device)
+        step = T // 10
+        data = []
+        for i in range(T - 1, -1, -1):
+            t = torch.full((1,), i, device=common.device, dtype=torch.long)
+            img = sample_timestep(img, t)
+            if i % step == 0:
+                data.append(img[0])
+        print_example(data, epoch // 100)
         torch.save(model.state_dict(), 'model_weights')
         print('saved')
 

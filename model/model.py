@@ -3,11 +3,11 @@ from torch import nn
 import torch.nn.functional as F
 import math
 
-M_REAL = 8
+M_REAL = 20
 M = 6 + 6 * M_REAL
 N = 5
 IMG_N = 50
-HIDDEN = 128
+HIDDEN = 256
 M_DIV = 1
 BLOCKS = 1000000
 
@@ -28,10 +28,12 @@ class SinusoidalPositionEmbeddings(nn.Module):
 
 
 class SimpleDenoiser(nn.Module):
-    def __init__(self, noise_level, device):
+    def __init__(self, device):
         super().__init__()
+        self.range = 4
         self.device = device
-        self.w_x = nn.Parameter(torch.normal(0, 1, (BLOCKS * 6, HIDDEN)), requires_grad=True).to('cpu')
+        self.make_time_embed = SinusoidalPositionEmbeddings(HIDDEN)
+        self.w_x = nn.Parameter(torch.empty(BLOCKS, HIDDEN), requires_grad=True).to('cpu')
         self.w_coords = nn.Parameter(torch.normal(0, 1, (HIDDEN * 6, HIDDEN)), requires_grad=True)
         self.transformer = nn.Transformer(d_model=HIDDEN, dtype=torch.float, batch_first=True)
         self.make_coord_embed = nn.Sequential(
@@ -49,16 +51,17 @@ class SimpleDenoiser(nn.Module):
             nn.Linear(HIDDEN, 1).to(device)
         )
 
-    def forward(self, svg, timestep):
+    def forward(self, svg, timestamp):
         batch_size = svg.shape[0]
         svg = svg.reshape(batch_size, N * M // 6, 6)
-        svg = torch.clamp((svg + 1) / 2 * BLOCKS, 0, BLOCKS - 1).long()
+        svg = torch.clamp((svg + self.range) / (2 * self.range) * BLOCKS, 0, BLOCKS - 1).long()
         coords = F.embedding(svg, self.w_x).to(self.device)
         coords = coords.reshape(batch_size, N * M // 6, HIDDEN * 6)
         embeds = torch.matmul(coords, self.w_coords)
-        noise_embeds = self.transformer(embeds, embeds)
+        time_embed = self.make_time_embed(timestamp)
+        time_embed = time_embed.reshape(batch_size, 1, HIDDEN)
+        noise_embeds = self.transformer(torch.cat([time_embed, embeds], dim=1), embeds)
         coord_embed = self.make_coord_embed(noise_embeds)
         coord_embed = coord_embed.reshape(batch_size, N * M, HIDDEN)
-        # bin_probs = torch.softmax(torch.matmul(coord_embed.to('cpu'), self.w_x.permute(1, 0)), dim=-1).to(self.device)
         noise_result = self.make_noise_result(coord_embed)
         return noise_result.reshape(batch_size, N, M)
