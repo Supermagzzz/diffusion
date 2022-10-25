@@ -9,7 +9,7 @@ N = 5
 IMG_N = 50
 HIDDEN = 256
 M_DIV = 1
-BLOCKS = 1000000
+BLOCKS = 2000000
 
 
 class SinusoidalPositionEmbeddings(nn.Module):

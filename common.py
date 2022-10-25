@@ -2,7 +2,7 @@ import torch
 
 from dataset.dataloader import CustomImageDataset
 from torch.utils.data import DataLoader
-
+import torch.nn.functional as F
 from deepsvg.svglib.svg import SVG
 
 
@@ -27,6 +27,7 @@ class Common:
         self.dataloader = DataLoader(self.dataset, self.real_batch_sz, shuffle=False, drop_last=True)
 
     def calc_loss(self, a, b):
+        return F.l1_loss(a, b)
         return (a - b).pow(2).sum()
 
     def make_sample(self, batch):

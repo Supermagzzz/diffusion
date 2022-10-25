@@ -1,5 +1,5 @@
 import torch
-
+from torch import nn
 from model.model import SimpleDenoiser
 from common import Common
 import imageio.v2 as imageio
@@ -44,9 +44,10 @@ def forward_diffusion_sample(x_0, t, device="cpu"):
 common = Common()
 
 model = SimpleDenoiser(common.device)
+model = nn.DataParallel(model)
 model.to(common.device)
 print(common.device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
 @torch.no_grad()
 def sample_timestep(x, t):
