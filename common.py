@@ -13,8 +13,8 @@ class Common:
         self.M_REAL = self.M * 6 + 6
         self.noise_level = 0.03
         self.know_level = 0.01
-        self.batch_sz = 512
-        self.cpu_batch_sz = 5
+        self.batch_sz = 1
+        self.cpu_batch_sz = 1
         self.apply_batch_sz = 5
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.dataset = CustomImageDataset('data/tensors')

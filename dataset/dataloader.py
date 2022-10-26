@@ -12,6 +12,7 @@ class CustomImageDataset(Dataset):
                 img_path = os.path.join(img_dir, i)
                 data = pickle.load(open(img_path, 'rb'))
                 self.images.append(data)
+                break
         self.img_dir = img_dir
         self.transform = transform
         self.target_transform = target_transform

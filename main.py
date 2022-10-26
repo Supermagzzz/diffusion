@@ -47,7 +47,7 @@ model = SimpleDenoiser(common.device)
 model = nn.DataParallel(model)
 model.to(common.device)
 print(common.device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
 
 @torch.no_grad()
 def sample_timestep(x, t):
@@ -83,6 +83,7 @@ def print_example(data, index):
 for epoch in range(100000):
     for step, batch in enumerate(common.dataloader):
         real = common.make_sample(batch)
+        real = torch.cat([real for x in range(512)], dim=0)
         optimizer.zero_grad()
 
         t = torch.randint(0, T, (batch.shape[0],), device=common.device).long()
