@@ -43,7 +43,7 @@ def forward_diffusion_sample(x_0, t, device="cpu"):
 
 common = Common()
 
-model = SimpleDenoiser(common.device)
+model = SimpleDenoiser(common)
 model = nn.DataParallel(model)
 model.to(common.device)
 print(common.device)
@@ -83,7 +83,7 @@ def print_example(data, index):
 for epoch in range(100000):
     for step, batch in enumerate(common.dataloader):
         real = common.make_sample(batch)
-        real = torch.cat([real for x in range(512)], dim=0)
+        # real = torch.cat([real for x in range(512)], dim=0)
         optimizer.zero_grad()
 
         t = torch.randint(0, T, (batch.shape[0],), device=common.device).long()

@@ -10,6 +10,8 @@ class Common:
     def __init__(self, check=False):
         self.N = 5
         self.M = 20
+        self.HIDDEN = 256
+        self.BLOCKS = 2000000
         self.M_REAL = self.M * 6 + 6
         self.noise_level = 0.03
         self.know_level = 0.01
