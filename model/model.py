@@ -36,15 +36,15 @@ class SimpleDenoiser(nn.Module):
         self.make_time_embed = SinusoidalPositionEmbeddings(common.HIDDEN)
         self.w_x = nn.Parameter(torch.empty(common.BLOCKS, common.HIDDEN), requires_grad=True).to('cpu')
         self.w_coords = nn.Parameter(torch.normal(0, 1, (common.HIDDEN * 6, common.HIDDEN)), requires_grad=True)
-        self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True)
+        self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True, num_encoder_layers=12, num_decoder_layers=12)
         self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN * 6)] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
             nn.ReLU()
-        ] for i in range(3)], []))
+        ] for i in range(10)], []))
         self.make_noise_result = nn.ModuleList(sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
-        ] for i in range(3)], []) + [nn.Linear(common.HIDDEN, 1)])
+        ] for i in range(10)], []) + [nn.Linear(common.HIDDEN, 1)])
 
     def forward(self, svg, timestamp):
         batch_size = svg.shape[0]
