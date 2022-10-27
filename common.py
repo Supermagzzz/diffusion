@@ -59,15 +59,15 @@ class Common:
     def add_noise(self, tensor, mult):
         return (torch.normal(0, mult, size=tensor.shape).to(self.device) - tensor * self.know_level).to(self.device)
 
-    def forward_diffusion_sample(self, x_0, t, device="cpu"):
-        noise = torch.randn_like(x_0).to(self.device)
+    def forward_diffusion_sample(self, x_0, t):
+        noise = torch.randn_like(x_0)
         sqrt_alphas_cumprod_t = get_index_from_list(self.sqrt_alphas_cumprod, t, x_0.shape)
         sqrt_one_minus_alphas_cumprod_t = get_index_from_list(
             self.sqrt_one_minus_alphas_cumprod, t, x_0.shape
         )
         # mean + variance
-        return sqrt_alphas_cumprod_t.to(device) * x_0.to(device) \
-            + sqrt_one_minus_alphas_cumprod_t.to(device) * noise.to(device), noise.to(device)
+        return sqrt_alphas_cumprod_t.to(self.device) * x_0.to(self.device) \
+            + sqrt_one_minus_alphas_cumprod_t.to(self.device) * noise.to(self.device), noise.to(self.device)
 
     @torch.no_grad()
     def sample_timestep(self, x, t, predict):
