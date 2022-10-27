@@ -11,7 +11,7 @@ from common import Common
 torch.set_default_dtype(torch.float32)
 common = Common(check=True)
 
-model = SimpleDenoiser(common.device)
+model = SimpleDenoiser(common)
 model = nn.DataParallel(model)
 model.load_state_dict(torch.load('model_weights'))
 model.to(common.device)
