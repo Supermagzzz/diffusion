@@ -60,7 +60,7 @@ class Common:
         return (torch.normal(0, mult, size=tensor.shape).to(self.device) - tensor * self.know_level).to(self.device)
 
     def forward_diffusion_sample(self, x_0, t, device="cpu"):
-        noise = torch.randn_like(x_0)
+        noise = torch.randn_like(x_0).to(self.device)
         sqrt_alphas_cumprod_t = get_index_from_list(self.sqrt_alphas_cumprod, t, x_0.shape)
         sqrt_one_minus_alphas_cumprod_t = get_index_from_list(
             self.sqrt_one_minus_alphas_cumprod, t, x_0.shape
