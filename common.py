@@ -6,16 +6,26 @@ import torch.nn.functional as F
 from deepsvg.svglib.svg import SVG
 
 
+def linear_beta_schedule(timesteps, start=0.0001, end=0.02):
+    return torch.linspace(start, end, timesteps)
+
+
+def get_index_from_list(vals, t, x_shape):
+    batch_size = t.shape[0]
+    out = vals.gather(-1, t.cpu())
+    return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
+
+
 class Common:
     def __init__(self, check=False):
         self.N = 5
-        self.M = 20
+        self.M = 8
         self.HIDDEN = 256
         self.BLOCKS = 2000000
         self.M_REAL = self.M * 6 + 6
-        self.noise_level = 0.03
+        self.noise_level = 0.01
         self.know_level = 0.01
-        self.batch_sz = 1
+        self.batch_sz = 512
         self.cpu_batch_sz = 1
         self.apply_batch_sz = 5
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -28,8 +38,18 @@ class Common:
 
         self.dataloader = DataLoader(self.dataset, self.real_batch_sz, shuffle=False, drop_last=True)
 
+        self.T = 300
+        self.betas = linear_beta_schedule(timesteps=T)
+        self.alphas = 1. - self.betas
+        self.alphas_cumprod = torch.cumprod(self.alphas, dim=0)
+        self.alphas_cumprod_prev = F.pad(self.alphas_cumprod[:-1], (1, 0), value=1.0)
+        self.sqrt_recip_alphas = torch.sqrt(1.0 / self.alphas)
+        self.sqrt_alphas_cumprod = torch.sqrt(self.alphas_cumprod)
+        self.sqrt_one_minus_alphas_cumprod = torch.sqrt(1. - self.alphas_cumprod)
+        self.posterior_variance = self.betas * (1. - self.alphas_cumprod_prev) / (1. - self.alphas_cumprod)
+
     def calc_loss(self, a, b):
-        return F.l1_loss(a, b)
+        # return F.l1_loss(a, b)
         return (a - b).pow(2).sum()
 
     def make_sample(self, batch):
@@ -38,6 +58,35 @@ class Common:
 
     def add_noise(self, tensor, mult):
         return (torch.normal(0, mult, size=tensor.shape).to(self.device) - tensor * self.know_level).to(self.device)
+
+    def forward_diffusion_sample(self, x_0, t, device="cpu"):
+        noise = torch.randn_like(x_0)
+        sqrt_alphas_cumprod_t = get_index_from_list(self.sqrt_alphas_cumprod, t, x_0.shape)
+        sqrt_one_minus_alphas_cumprod_t = get_index_from_list(
+            self.sqrt_one_minus_alphas_cumprod, t, x_0.shape
+        )
+        # mean + variance
+        return sqrt_alphas_cumprod_t.to(device) * x_0.to(device) \
+            + sqrt_one_minus_alphas_cumprod_t.to(device) * noise.to(device), noise.to(device)
+
+    @torch.no_grad()
+    def sample_timestep(self, x, t, predict):
+        betas_t = get_index_from_list(self.betas, t, x.shape)
+        sqrt_one_minus_alphas_cumprod_t = get_index_from_list(
+            self.sqrt_one_minus_alphas_cumprod, t, x.shape
+        )
+        sqrt_recip_alphas_t = get_index_from_list(self.sqrt_recip_alphas, t, x.shape)
+
+        model_mean = sqrt_recip_alphas_t * (
+                x - betas_t * predict / sqrt_one_minus_alphas_cumprod_t
+        )
+        posterior_variance_t = get_index_from_list(self.posterior_variance, t, x.shape)
+
+        if t == 0:
+            return model_mean
+        else:
+            noise = torch.randn_like(x)
+            return model_mean + torch.sqrt(posterior_variance_t) * noise
 
     def make_svg(self, tensor):
         tensor += 0.7
