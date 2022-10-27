@@ -33,7 +33,7 @@ for epoch in range(10000000):
         optimizer.zero_grad()
 
         t = torch.randint(0, common.T, (real.shape[0],), device=common.device).long() * 0
-        noised, noise = common.forward_diffusion_sample(real, t, common.device)
+        noised, noise = common.forward_diffusion_sample(real, t)
 
         pred_noise = model(noised, t)
 
