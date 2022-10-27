@@ -28,7 +28,7 @@ for batch in common.dataloader:
     baseline = common.calc_loss(noise, -batch * common.know_level)
     print(loss.item(), baseline.item(), (loss / baseline).item())
     for x in range(common.apply_batch_sz):
-        common.make_svg(common.sample_timestep(noised, t, pred_noise)).save_svg('trash/' + 'test' + str(x) + '.svg')
+        common.make_svg(common.sample_timestep(noised[x], t[x], pred_noise[x])).save_svg('trash/' + 'test' + str(x) + '.svg')
         common.make_svg(batch[x]).save_svg('trash/' + 'real' + str(x) + '.svg')
         common.make_svg(noised[x]).save_svg('trash/' + 'inp' + str(x) + '.svg')
 
