@@ -22,7 +22,7 @@ for batch in common.dataloader:
     batch = batch.to(common.device)
     t = torch.zeros(batch.shape[0]).long()
     noised, noise = common.forward_diffusion_sample(batch, t)
-    pred_noise = model(noised, torch.Tensor(1).to(common.device))
+    pred_noise = model(noised, t)
 
     loss = common.calc_loss(noise, pred_noise)
     baseline = common.calc_loss(noise, -batch * common.know_level)
