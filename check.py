@@ -20,7 +20,7 @@ print(common.device)
 for batch in common.dataloader:
     batch = torch.cat([batch[:, :, :2], batch[:, :, :2], batch], dim=-1)
     batch = batch.to(common.device)
-    t = torch.zeros(batch.shape[0])
+    t = torch.zeros(batch.shape[0]).long()
     noised, noise = common.forward_diffusion_sample(batch, t)
     pred_noise = model(noised, torch.Tensor(1).to(common.device))
 
