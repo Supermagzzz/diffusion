@@ -42,11 +42,17 @@ class Common:
         self.betas = linear_beta_schedule(timesteps=self.T)
         self.alphas = 1. - self.betas
         self.alphas_cumprod = torch.cumprod(self.alphas, dim=0)
-        self.alphas_cumprod_prev = F.pad(self.alphas_cumprod[:-1], (1, 0), value=1.0)
+        self.alphas_cumprod_prev = F.pad(self.alphas_cumprod[:-1], (1, 0), value=1.)
         self.sqrt_recip_alphas = torch.sqrt(1.0 / self.alphas)
         self.sqrt_alphas_cumprod = torch.sqrt(self.alphas_cumprod)
         self.sqrt_one_minus_alphas_cumprod = torch.sqrt(1. - self.alphas_cumprod)
+        self.log_one_minus_alphas_cumprod = torch.log(1. - self.alphas_cumprod)
+        self.sqrt_recip_alphas_cumprod = torch.sqrt(1. / self.alphas_cumprod)
+        self.sqrt_recipm1_alphas_cumprod = torch.sqrt(1. / self.alphas_cumprod - 1)
         self.posterior_variance = self.betas * (1. - self.alphas_cumprod_prev) / (1. - self.alphas_cumprod)
+        self.posterior_log_variance_clipped = torch.log(self.posterior_variance.clamp(min=1e-20))
+        self.posterior_mean_coef1 = self.betas * torch.sqrt(self.alphas_cumprod_prev) / (1. - self.alphas_cumprod)
+        self.posterior_mean_coef2 = (1. - self.alphas_cumprod_prev) * torch.sqrt(self.alphas) / (1. - self.alphas_cumprod)
 
     def calc_loss(self, a, b):
         # return (a-b).exp().sum()+(b-a).exp().sum()
@@ -70,7 +76,6 @@ class Common:
         return sqrt_alphas_cumprod_t.to(self.device) * x_0.to(self.device) \
             + sqrt_one_minus_alphas_cumprod_t.to(self.device) * noise.to(self.device), noise.to(self.device)
 
-    @torch.no_grad()
     def sample_timestep(self, x, t, predict):
         betas_t = get_index_from_list(self.betas, t, x.shape)
         sqrt_one_minus_alphas_cumprod_t = get_index_from_list(
@@ -88,6 +93,32 @@ class Common:
         else:
             noise = torch.randn_like(x)
             return model_mean + torch.sqrt(posterior_variance_t) * noise
+
+    def predict_start_from_noise(self, x, t, predict):
+        sqrt_recip_alphas_cumprod_t = get_index_from_list(self.sqrt_recip_alphas_cumprod, t, x.shape)
+        sqrt_recipm1_alphas_cumprod_t = get_index_from_list(self.sqrt_recipm1_alphas_cumprod, t, x.shape)
+        return sqrt_recip_alphas_cumprod_t * x - sqrt_recipm1_alphas_cumprod_t * predict
+
+    def q_posterior(self, x_start, predict, t):
+        posterior_mean = (
+                get_index_from_list(self.posterior_mean_coef1, t, predict.shape) * x_start +
+                get_index_from_list(self.posterior_mean_coef2, t, predict.shape) * predict
+        )
+        posterior_variance = get_index_from_list(self.posterior_variance, t, predict.shape)
+        posterior_log_variance_clipped = get_index_from_list(self.posterior_log_variance_clipped, t, predict.shape)
+        return posterior_mean, posterior_variance, posterior_log_variance_clipped
+
+    def p_mean_variance(self, x, t, predict):
+        x_start = self.predict_start_from_noise(x, t, predict)
+        return self.q_posterior(x_start, x, t)
+
+    def p_sample(self, x, t, predict):
+        model_mean, _, model_log_variance = self.p_mean_variance(x, t, predict)
+        noise = torch.randn_like(x)
+        is_last_sampling_timestep = (t == 0)
+        nonzero_mask = (1 - is_last_sampling_timestep.float()).reshape(x.shape[0], *((1,) * (len(x.shape) - 1)))
+
+        return model_mean + nonzero_mask * (0.5 * model_log_variance).exp() * noise
 
     def make_svg(self, tensor):
         tensor += 0.7
