@@ -3,6 +3,8 @@ from torch import nn
 import torch.nn.functional as F
 import math
 
+import common
+
 
 class SimpleDenoiser(nn.Module):
     def __init__(self, common):
