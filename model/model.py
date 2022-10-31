@@ -40,11 +40,11 @@ class SimpleDenoiser(nn.Module):
         self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN * 6)] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
             nn.ReLU()
-        ] for i in range(10)], []))
+        ] for i in range(4)], []))
         self.make_noise_result = nn.ModuleList(sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
-        ] for i in range(10)], []) + [nn.Linear(common.HIDDEN, 1)])
+        ] for i in range(4)], []) + [nn.Linear(common.HIDDEN, 1)])
 
     def forward(self, svg, timestamp):
         batch_size = svg.shape[0]
@@ -57,7 +57,8 @@ class SimpleDenoiser(nn.Module):
         embeds = torch.matmul(coords, self.w_coords)
         time_embed = self.make_time_embed(timestamp)
         time_embed = time_embed.reshape(batch_size, 1, self.common.HIDDEN)
-        noise_embeds = self.transformer(torch.cat([time_embed, embeds], dim=1), embeds)
+        time_embed = torch.cat([time_embed for x in range(embeds.shape[1])], dim=1)
+        noise_embeds = self.transformer(embeds + time_embed, embeds)
         # coord_embed = self.make_coord_embed(noise_embeds)
         coord_embed = noise_embeds
         for layer in self.make_coord_embed:

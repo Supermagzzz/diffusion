@@ -49,6 +49,7 @@ class Common:
         self.posterior_variance = self.betas * (1. - self.alphas_cumprod_prev) / (1. - self.alphas_cumprod)
 
     def calc_loss(self, a, b):
+        # return (a-b).exp().sum()+(b-a).exp().sum()
         # return F.l1_loss(a, b)
         return (a - b).pow(2).sum()
 

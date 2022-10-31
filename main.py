@@ -12,8 +12,9 @@ common = Common()
 model = SimpleDenoiser(common)
 model = nn.DataParallel(model)
 model.to(common.device)
+model.load_state_dict(torch.load('model_weights'))
 print(common.device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.00001)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
 
 
 def print_example(data, index):
@@ -32,7 +33,7 @@ for epoch in range(10000000):
         real = common.make_sample(batch)
         optimizer.zero_grad()
 
-        t = torch.randint(0, common.T, (real.shape[0],), device=common.device).long() * 0
+        t = torch.randint(0, common.T, (real.shape[0],), device=common.device).long()
         noised, noise = common.forward_diffusion_sample(real, t)
 
         pred_noise = model(noised, t)
