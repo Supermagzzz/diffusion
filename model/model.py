@@ -12,8 +12,8 @@ class SimpleDenoiser(nn.Module):
         self.range = 4
         self.common = common
         self.device = common.device
-        self.time_embed_table = nn.Parameter(torch.normal(common.T, common.HIDDEN), requires_grad=True)
-        self.w_x = nn.Parameter(torch.normal(common.BLOCKS, common.HIDDEN), requires_grad=True)
+        self.time_embed_table = nn.Parameter(torch.normal(0, 1, (common.T, common.HIDDEN)), requires_grad=True)
+        self.w_x = nn.Parameter(torch.normal(0, 1, (common.T, common.HIDDEN)), requires_grad=True)
         self.w_coords = nn.Linear(common.HIDDEN * 6, common.HIDDEN)
         self.unite_with_time = nn.Sequential(
             nn.Linear(common.HIDDEN * 2, common.HIDDEN),
