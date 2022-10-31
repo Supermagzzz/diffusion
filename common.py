@@ -21,7 +21,7 @@ class Common:
         self.N = 5
         self.M = 8
         self.HIDDEN = 256
-        self.BLOCKS = 2000000
+        self.BLOCKS = 100000
         self.M_REAL = self.M * 6 + 6
         self.noise_level = 0.01
         self.know_level = 0.01
