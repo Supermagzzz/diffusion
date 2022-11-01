@@ -14,7 +14,7 @@ model = nn.DataParallel(model)
 model.to(common.device)
 # model.load_state_dict(torch.load('model_weights'))
 print(common.device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.00001)
 
 
 def print_example(data, index):
