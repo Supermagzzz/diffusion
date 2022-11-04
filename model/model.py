@@ -34,7 +34,7 @@ class SimpleDenoiser(nn.Module):
         )
         self.w_x = nn.Parameter(torch.normal(0, 1, (common.BLOCKS, common.HIDDEN)), requires_grad=True)
         self.w_coords = nn.Linear(common.HIDDEN * 6, common.HIDDEN)
-        self.unite_with_time = nn.Sequential(
+        self.unite_with_embeds = nn.Sequential(
             nn.Linear(common.HIDDEN * 3, common.HIDDEN),
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
@@ -69,7 +69,7 @@ class SimpleDenoiser(nn.Module):
         pos_embed = self.pos_embed_table(pos_embed)
         pos_embed = torch.cat([pos_embed for i in range(batch_size)])
 
-        embeds = self.unite_with_time(torch.cat([embeds, time_embed, pos_embed], dim=-1))
+        embeds = self.unite_with_embeds(torch.cat([embeds, time_embed, pos_embed], dim=-1))
         noise_embeds = self.transformer(embeds, embeds)
         # coord_embed = self.make_coord_embed(noise_embeds)
         coord_embed = noise_embeds
