@@ -20,8 +20,8 @@ class Common:
     def __init__(self, check=False):
         self.N = 5
         self.M = 8
-        self.HIDDEN = 256
-        self.BLOCKS = 100000
+        self.HIDDEN = 512
+        self.BLOCKS = 1000000
         self.M_REAL = self.M * 6 + 6
         self.noise_level = 0.01
         self.know_level = 0.01
@@ -38,7 +38,7 @@ class Common:
 
         self.dataloader = DataLoader(self.dataset, self.real_batch_sz, shuffle=False, drop_last=True)
 
-        self.T = 300
+        self.T = 500
         self.betas = linear_beta_schedule(timesteps=self.T)
         self.alphas = 1. - self.betas
         self.alphas_cumprod = torch.cumprod(self.alphas, dim=0)
@@ -99,6 +99,7 @@ class Common:
             command[-2] = row[0]
             command[-1] = row[1]
             lastX, lastY = row[0], row[1]
+            startX, startY = row[0], row[1]
             data.append(command)
             for i in range(6, row.shape[0], 6):
                 command = [-1] * 14

@@ -12,9 +12,12 @@ common = Common()
 model = SimpleDenoiser(common)
 model = nn.DataParallel(model)
 model.to(common.device)
-model.load_state_dict(torch.load('model_weights'), strict=False)
+try:
+    model.load_state_dict(torch.load('model_weights'), strict=False)
+except:
+    pass
 print(common.device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.00001)
+optimizer = torch.optim.AdamW(model.parameters(), lr=0.00001)
 
 
 def print_example(data, index):
@@ -23,7 +26,7 @@ def print_example(data, index):
         path = 'tmp/' + str(i) + '.png'
         common.make_svg(data[i]).save_png(path)
         im = imageio.imread(path)
-        plt.subplot(1, len(data), i + 1)
+        plt.subplot(2, len(data), i + 1)
         plt.imshow(im)
     plt.savefig('trash/plt' + str(index))
 
@@ -54,7 +57,8 @@ for epoch in range(10000000):
             img = common.sample_timestep(img, t, model(img, t))
             if i % step == 0:
                 data.append(img[0])
+            if i < step:
+                data.append(img[0])
         print_example(data, epoch // 100)
         torch.save(model.state_dict(), 'model_weights')
         print('saved')
-
