@@ -65,7 +65,7 @@ class SimpleDenoiser(nn.Module):
         time_embed = time_embed.reshape(batch_size, 1, self.common.HIDDEN)
         time_embed = torch.cat([time_embed for x in range(embeds.shape[1])], dim=1)
 
-        pos_embed = torch.Tensor([i for i in range(embeds.shape[1])]).long()
+        pos_embed = torch.Tensor([i for i in range(embeds.shape[1])]).long().to(self.device)
         pos_embed = self.pos_embed_table(pos_embed)
         pos_embed = torch.cat([pos_embed for i in range(batch_size)])
 
