@@ -34,7 +34,7 @@ class SimpleDenoiser(nn.Module):
         )
         self.w_x = nn.Parameter(torch.normal(0, 1, (common.BLOCKS, common.HIDDEN)), requires_grad=True)
         self.w_coords = nn.Linear(common.HIDDEN * 6, common.HIDDEN)
-        self.unite_with_embeds = nn.Sequential(
+        self.unite_with_time = nn.Sequential(
             nn.Linear(common.HIDDEN * 3, common.HIDDEN),
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
