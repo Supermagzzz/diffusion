@@ -67,7 +67,7 @@ class SimpleDenoiser(nn.Module):
 
         pos_embed = torch.Tensor([i for i in range(embeds.shape[1])]).long().to(self.device)
         pos_embed = self.pos_embed_table(pos_embed)
-        pos_embed = torch.cat([pos_embed for i in range(batch_size)])
+        pos_embed = torch.stack([pos_embed for i in range(batch_size)])
 
         embeds = self.unite_with_embeds(torch.cat([embeds, time_embed, pos_embed], dim=-1))
         noise_embeds = self.transformer(embeds, embeds)
