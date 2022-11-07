@@ -19,8 +19,8 @@ def get_index_from_list(vals, t, x_shape):
 class Common:
     def __init__(self, check=False):
         self.N = 5
-        self.M = 8
-        self.HIDDEN = 512
+        self.M = 20
+        self.HIDDEN = 256
         self.BLOCKS = 1000000
         self.M_REAL = self.M * 6 + 6
         self.noise_level = 0.01
@@ -38,7 +38,7 @@ class Common:
 
         self.dataloader = DataLoader(self.dataset, self.real_batch_sz, shuffle=False, drop_last=True)
 
-        self.T = 500
+        self.T = 300
         self.betas = linear_beta_schedule(timesteps=self.T)
         self.alphas = 1. - self.betas
         self.alphas_cumprod = torch.cumprod(self.alphas, dim=0)
@@ -49,7 +49,6 @@ class Common:
         self.posterior_variance = self.betas * (1. - self.alphas_cumprod_prev) / (1. - self.alphas_cumprod)
 
     def calc_loss(self, a, b):
-        # return (a-b).exp().sum()+(b-a).exp().sum()
         # return F.l1_loss(a, b)
         return (a - b).pow(2).sum()
 
@@ -68,7 +67,7 @@ class Common:
         )
         # mean + variance
         return sqrt_alphas_cumprod_t.to(self.device) * x_0.to(self.device) \
-            + sqrt_one_minus_alphas_cumprod_t.to(self.device) * noise.to(self.device), noise.to(self.device)
+               + sqrt_one_minus_alphas_cumprod_t.to(self.device) * noise.to(self.device), noise.to(self.device)
 
     @torch.no_grad()
     def sample_timestep(self, x, t, predict):
@@ -115,4 +114,3 @@ class Common:
                 lastX, lastY = command[-2], command[-1]
                 data.append(command)
         return SVG.from_tensor(torch.Tensor(data))
-

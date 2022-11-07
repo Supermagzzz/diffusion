@@ -17,17 +17,19 @@ print(common.device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=0.00001)
 
 
-def print_example(data, index):
+def print_example(data, index, all_losses):
     plt.figure(figsize=(15, 3))
     for i in range(len(data)):
         path = 'tmp/' + str(i) + '.png'
         common.make_svg(data[i]).save_png(path)
         im = imageio.imread(path)
-        plt.subplot(2, len(data), i + 1)
+        plt.subplot(2, (len(data) + 1) // 2, i + 1)
         plt.imshow(im)
+    plt.plot(all_losses)
     plt.savefig('trash/plt' + str(index))
 
 
+all_losses = []
 for epoch in range(10000000):
     for step, batch in enumerate(common.dataloader):
         real = common.make_sample(batch)
@@ -41,6 +43,7 @@ for epoch in range(10000000):
         loss = common.calc_loss(noise, pred_noise)
         baseline = common.calc_loss(noise, -real * common.know_level)
 
+        all_losses.append((loss / baseline).item())
         loss.backward()
         optimizer.step()
         print(epoch, loss.item(), baseline.item(), (loss / baseline).item())
@@ -54,8 +57,8 @@ for epoch in range(10000000):
             img = common.sample_timestep(img, t, model(img, t))
             if i % step == 0:
                 data.append(img[0])
-            if i < step:
+            elif i < 10:
                 data.append(img[0])
-        print_example(data, epoch // 100)
+        print_example(data, epoch // 100, all_losses)
         torch.save(model.state_dict(), 'model_weights')
         print('saved')

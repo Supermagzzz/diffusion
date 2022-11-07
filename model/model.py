@@ -42,7 +42,7 @@ class SimpleDenoiser(nn.Module):
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
         self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True, num_encoder_layers=12, num_decoder_layers=12)
-        self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN * 6)] + sum([[
+        self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 2, common.HIDDEN * 6)] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
             nn.ReLU()
         ] for i in range(2)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6)])
@@ -72,7 +72,7 @@ class SimpleDenoiser(nn.Module):
         embeds = self.unite_with_embeds(torch.cat([embeds, time_embed, pos_embed], dim=-1))
         noise_embeds = self.transformer(embeds, embeds)
         # coord_embed = self.make_coord_embed(noise_embeds)
-        coord_embed = noise_embeds
+        coord_embed = torch.cat([noise_embeds, embeds], dim=-1)
         for layer in self.make_coord_embed:
             coord_embed = layer(coord_embed)
         coord_embed = coord_embed.reshape(batch_size, self.common.N * self.common.M_REAL, self.common.HIDDEN)
