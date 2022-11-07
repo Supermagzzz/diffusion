@@ -25,8 +25,9 @@ def print_example(data, index, all_losses):
         im = imageio.imread(path)
         plt.subplot(2, (len(data) + 1) // 2, i + 1)
         plt.imshow(im)
-    plt.plot(all_losses)
     plt.savefig('trash/plt' + str(index))
+    plt.plot(all_losses)
+    plt.savefig('trash/loss' + str(index))
 
 
 all_losses = []
