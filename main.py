@@ -26,6 +26,7 @@ def print_example(data, index, all_losses):
         plt.subplot(2, (len(data) + 1) // 2, i + 1)
         plt.imshow(im)
     plt.savefig('trash/plt' + str(index))
+    plt.figure(figsize=(15, 3))
     plt.plot(all_losses)
     plt.savefig('trash/loss' + str(index))
 
