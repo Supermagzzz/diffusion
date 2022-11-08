@@ -36,9 +36,9 @@ class SimpleDenoiser(nn.Module):
         self.unite_with_real_svg = nn.Sequential(
             nn.Linear(common.HIDDEN + 1, common.HIDDEN),
             nn.Tanh(),
-            nn.Linear(common.HIDDEN + 1, common.HIDDEN),
+            nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU(),
-            nn.Linear()
+            nn.Linear(common.HIDDEN, common.HIDDEN)
         )
         self.w_coords = nn.Linear(common.HIDDEN * 6, common.HIDDEN)
         self.unite_with_embeds = nn.Sequential(
@@ -52,11 +52,11 @@ class SimpleDenoiser(nn.Module):
         self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 2, common.HIDDEN * 6)] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
             nn.Tanh()
-        ] for i in range(2)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6)])
+        ] for i in range(3)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6)])
         self.make_noise_result = nn.ModuleList(sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
-        ] for i in range(2)], []) + [nn.Linear(common.HIDDEN, 1)])
+        ] for i in range(3)], []) + [nn.Linear(common.HIDDEN, 1)])
 
     def forward(self, svg, timestamp):
         batch_size = svg.shape[0]

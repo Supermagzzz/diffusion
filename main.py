@@ -12,7 +12,7 @@ common = Common()
 model = SimpleDenoiser(common)
 model = nn.DataParallel(model)
 model.to(common.device)
-model.load_state_dict(torch.load('model_weights'), strict=False)
+#model.load_state_dict(torch.load('model_weights'), strict=False)
 print(common.device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=0.00001)
 
