@@ -60,10 +60,11 @@ class SimpleDenoiser(nn.Module):
 
     def forward(self, svg, timestamp):
         batch_size = svg.shape[0]
-        svg = svg.reshape(batch_size, self.common.N * self.common.M_REAL // 6, 6, 1)
+        svg = svg.reshape(batch_size, self.common.N * self.common.M_REAL // 6, 6)
         # coords = self.make_w_x(svg)
         svg_long = torch.clamp((svg + self.range) / (2 * self.range) * self.common.BLOCKS, 0, self.common.BLOCKS - 1).long()
         coords = F.embedding(svg_long, self.w_x).to(self.device)
+        svg = svg.reshape(batch_size, self.common.N * self.common.M_REAL // 6, 6, 1)
         coords = self.unite_with_real_svg(torch.cat([coords, svg], dim=-1))
         coords = coords.reshape(batch_size, self.common.N * self.common.M_REAL // 6, self.common.HIDDEN * 6)
         # embeds = self.make_w_coord(coords)
