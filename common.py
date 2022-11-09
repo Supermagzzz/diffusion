@@ -1,3 +1,5 @@
+import math
+
 import torch
 
 from dataset.dataloader import CustomImageDataset
@@ -6,8 +8,8 @@ import torch.nn.functional as F
 from deepsvg.svglib.svg import SVG
 
 
-def linear_beta_schedule(timesteps, start=0.0001, end=0.02):
-    return torch.linspace(start, end, timesteps)
+def linear_beta_schedule(timesteps, start=0.0001, end=0.1):
+    return torch.linspace(math.sqrt(start), math.sqrt(end), timesteps).pow(2)
 
 
 def get_index_from_list(vals, t, x_shape):
@@ -67,6 +69,8 @@ class Common:
             self.sqrt_one_minus_alphas_cumprod, t, x_0.shape
         )
         # mean + variance
+        print(sqrt_alphas_cumprod_t)
+        print(sqrt_one_minus_alphas_cumprod_t)
         return sqrt_alphas_cumprod_t.to(self.device) * x_0.to(self.device) \
                + sqrt_one_minus_alphas_cumprod_t.to(self.device) * noise.to(self.device), noise.to(self.device)
 

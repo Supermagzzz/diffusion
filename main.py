@@ -30,7 +30,6 @@ def print_example(data, index, all_losses):
     plt.plot(all_losses)
     plt.savefig('trash/loss' + str(index))
 
-
 all_losses = []
 for epoch in range(10000000):
     for step, batch in enumerate(common.dataloader):

@@ -26,13 +26,13 @@ class SimpleDenoiser(nn.Module):
         self.range = 4
         self.common = common
         self.device = common.device
-        self.time_embed_table = nn.Parameter(torch.empty((common.T, common.HIDDEN)), requires_grad=True)
+        self.time_embed_table = nn.Parameter(torch.normal(0, 1, (common.T, common.HIDDEN)), requires_grad=True)
         self.pos_embed_table = nn.Sequential(
             SinusoidalPositionEmbeddings(common.HIDDEN),
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
         )
-        self.w_x = nn.Parameter(torch.normal(0, 1, (common.BLOCKS, common.HIDDEN)), requires_grad=True)
+        self.w_x = nn.Parameter(torch.rand((common.BLOCKS, common.HIDDEN)), requires_grad=True)
         self.unite_with_real_svg = nn.Sequential(
             nn.Linear(common.HIDDEN + 2, common.HIDDEN),
             nn.ReLU(),
