@@ -35,7 +35,7 @@ class SimpleDenoiser(nn.Module):
         self.w_x = nn.Parameter(torch.normal(0, 1, (common.BLOCKS, common.HIDDEN)), requires_grad=True)
         self.unite_with_real_svg = nn.Sequential(
             nn.Linear(common.HIDDEN + 1, common.HIDDEN),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN)
@@ -43,16 +43,20 @@ class SimpleDenoiser(nn.Module):
         self.w_coords = nn.Linear(common.HIDDEN * 6, common.HIDDEN)
         self.unite_with_embeds = nn.Sequential(
             nn.Linear(common.HIDDEN * 3, common.HIDDEN),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
         self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True, num_encoder_layers=12, num_decoder_layers=12)
-        self.make_probs = nn.Softmax()
+        self.make_probs = nn.Sequential(
+            nn.Softmax(),
+            nn.Linear(common.BLOCKS, common.HIDDEN),
+            nn.ReLU()
+        )
         self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 2, common.HIDDEN * 6)] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
-            nn.Tanh()
+            nn.ReLU()
         ] for i in range(3)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6)])
         self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN * 3, common.HIDDEN)] + sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
@@ -85,7 +89,6 @@ class SimpleDenoiser(nn.Module):
         coord_embed = coord_embed.reshape(batch_size, self.common.N * self.common.M_REAL, self.common.HIDDEN)
 
         prob_embeds = self.make_probs(torch.matmul(self.w_x, coord_embed.permute(0, 2, 1)))
-        prob_embeds = torch.matmul(prob_embeds.permute(0, 2, 1), self.w_x)
         coord_prob_embeds = coord_embed * prob_embeds
 
         noise_result = torch.cat([coord_embed, prob_embeds, coord_prob_embeds], dim=-1)

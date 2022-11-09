@@ -19,9 +19,9 @@ def get_index_from_list(vals, t, x_shape):
 class Common:
     def __init__(self, check=False):
         self.N = 5
-        self.M = 20
+        self.M = 8
         self.HIDDEN = 512
-        self.BLOCKS = 50000
+        self.BLOCKS = 10000
         self.M_REAL = self.M * 6 + 6
         self.noise_level = 0.01
         self.know_level = 0.01
