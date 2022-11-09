@@ -34,7 +34,7 @@ class SimpleDenoiser(nn.Module):
         )
         self.w_x = nn.Parameter(torch.normal(0, 1, (common.BLOCKS, common.HIDDEN)), requires_grad=True)
         self.unite_with_real_svg = nn.Sequential(
-            nn.Linear(common.HIDDEN + 1, common.HIDDEN),
+            nn.Linear(common.HIDDEN + 2, common.HIDDEN),
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU(),
@@ -67,9 +67,11 @@ class SimpleDenoiser(nn.Module):
         batch_size = svg.shape[0]
         svg = svg.reshape(batch_size, self.common.N * self.common.M_REAL // 6, 6)
         svg_long = torch.clamp((svg + self.range) / (2 * self.range) * self.common.BLOCKS, 0, self.common.BLOCKS - 1).long()
+        svg_rem = torch.fmod((svg + self.range) / (2 * self.range) * self.common.BLOCKS, 1)
         coords = F.embedding(svg_long, self.w_x).to(self.device)
         svg = svg.reshape(batch_size, self.common.N * self.common.M_REAL // 6, 6, 1)
-        coords = self.unite_with_real_svg(torch.cat([coords, svg], dim=-1))
+        svg_rem = svg_rem.reshape(batch_size, self.common.N * self.common.M_REAL // 6, 6, 1)
+        coords = self.unite_with_real_svg(torch.cat([coords, svg, svg_rem], dim=-1))
         coords = coords.reshape(batch_size, self.common.N * self.common.M_REAL // 6, self.common.HIDDEN * 6)
         embeds = self.w_coords(coords)
 
