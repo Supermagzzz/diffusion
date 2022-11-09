@@ -19,7 +19,7 @@ def get_index_from_list(vals, t, x_shape):
 class Common:
     def __init__(self, check=False):
         self.N = 5
-        self.M = 8
+        self.M = 20
         self.HIDDEN = 512
         self.BLOCKS = 50000
         self.M_REAL = self.M * 6 + 6
@@ -36,7 +36,7 @@ class Common:
         else:
             self.real_batch_sz = self.cpu_batch_sz if self.device == "cpu" else self.batch_sz
 
-        self.dataloader = DataLoader(self.dataset, self.real_batch_sz, shuffle=False, drop_last=True)
+        self.dataloader = DataLoader(self.dataset, self.real_batch_sz, shuffle=True, drop_last=True)
 
         self.T = 300
         self.betas = linear_beta_schedule(timesteps=self.T)
@@ -49,6 +49,7 @@ class Common:
         self.posterior_variance = self.betas * (1. - self.alphas_cumprod_prev) / (1. - self.alphas_cumprod)
 
     def calc_loss(self, a, b):
+        # return (a - b).exp().sum() + (b - a).exp().sum()
         # return F.l1_loss(a, b)
         return (a - b).pow(2).sum()
 
@@ -111,6 +112,12 @@ class Common:
                 command[-3] = row[i + 3]
                 command[-2] = row[i + 4]
                 command[-1] = row[i + 5]
+                if i + 6 == row.shape[0]:
+                    command[-2] = startX
+                    command[-1] = startY
+                else:
+                    command[-2] = row[i + 4]
+                    command[-1] = row[i + 5]
                 lastX, lastY = command[-2], command[-1]
                 data.append(command)
         return SVG.from_tensor(torch.Tensor(data))
