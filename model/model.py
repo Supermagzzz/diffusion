@@ -88,7 +88,7 @@ class SimpleDenoiser(nn.Module):
             coord_embed = layer(coord_embed)
         coord_embed = coord_embed.reshape(batch_size, self.common.N * self.common.M_REAL, self.common.HIDDEN)
 
-        prob_embeds = self.make_probs(torch.matmul(coord_embed, self.w_x))
+        prob_embeds = self.make_probs(torch.matmul(self.w_x, coord_embed.permute(0, 2, 1)).permute(0, 2, 1))
         coord_prob_embeds = coord_embed * prob_embeds
 
         noise_result = torch.cat([coord_embed, prob_embeds, coord_prob_embeds], dim=-1)
