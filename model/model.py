@@ -26,7 +26,18 @@ class SimpleDenoiser(nn.Module):
         self.range = 4
         self.common = common
         self.device = common.device
-        self.time_embed_table = nn.Parameter(torch.normal(0, 1, (common.T, common.HIDDEN)), requires_grad=True)
+        self.add_time_embed_table = nn.Parameter(torch.empty((common.T, common.HIDDEN)), requires_grad=True)
+
+        self.get_time_embed_table_normal = nn.Parameter(torch.normal(0, 1, (common.T, common.HIDDEN)), requires_grad=True)
+        self.get_time_embed_table_sinus = SinusoidalPositionEmbeddings(common.HIDDEN)
+        self.get_time_embed_table = nn.Sequential(
+            nn.Linear(common.HIDDEN * 2, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN)
+        )
+
         self.pos_embed_table = nn.Sequential(
             SinusoidalPositionEmbeddings(common.HIDDEN),
             nn.Linear(common.HIDDEN, common.HIDDEN),
@@ -75,7 +86,7 @@ class SimpleDenoiser(nn.Module):
         coords = coords.reshape(batch_size, self.common.N * self.common.M_REAL // 6, self.common.HIDDEN * 6)
         embeds = self.w_coords(coords)
 
-        time_embed = F.embedding(timestamp, self.time_embed_table)
+        time_embed = F.embedding(timestamp, self.add_time_embed_table)
         time_embed = time_embed.reshape(batch_size, 1, self.common.HIDDEN)
         time_embed = torch.cat([time_embed for x in range(embeds.shape[1])], dim=1)
 
@@ -84,7 +95,12 @@ class SimpleDenoiser(nn.Module):
         pos_embed = torch.stack([pos_embed for i in range(batch_size)])
 
         embeds = self.unite_with_embeds(torch.cat([embeds, time_embed, pos_embed], dim=-1))
-        noise_embeds = self.transformer(embeds, embeds)
+        out_embeds = self.get_time_embed_table(torch.cat([
+            F.embedding(timestamp, self.get_time_embed_table_normal),
+            self.get_time_embed_table_sinus(timestamp)
+        ], dim=-1))
+
+        noise_embeds = self.transformer(embeds, out_embeds)
         coord_embed = torch.cat([noise_embeds, embeds], dim=-1)
         for layer in self.make_coord_embed:
             coord_embed = layer(coord_embed)
