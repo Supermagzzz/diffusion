@@ -14,15 +14,15 @@ def linear_beta_schedule(timesteps, start=0.0001, end=0.05):
 
 def get_index_from_list(vals, t, x_shape):
     batch_size = t.shape[0]
-    out = vals.gather(-1, t.cpu())
-    return out.reshape(batch_size, *((1,) * (len(x_shape) - 1))).to(t.device)
+    out = vals.gather(-1, t)
+    return out.reshape(batch_size, *((1,) * (len(x_shape) - 1)))
 
 
 class Common:
     def __init__(self, check=False):
         self.N = 5
-        self.M = 8
-        self.HIDDEN = 512
+        self.M = 20
+        self.HIDDEN = 256
         self.BLOCKS = 10000
         self.M_REAL = self.M * 6 + 6
         self.noise_level = 0.01
@@ -41,19 +41,27 @@ class Common:
         self.dataloader = DataLoader(self.dataset, self.real_batch_sz, shuffle=False, drop_last=True)
 
         self.T = 300
-        self.betas = linear_beta_schedule(timesteps=self.T)
+        self.betas = linear_beta_schedule(timesteps=self.T).to(self.device)
         self.alphas = 1. - self.betas
-        self.alphas_cumprod = torch.cumprod(self.alphas, dim=0)
-        self.alphas_cumprod_prev = F.pad(self.alphas_cumprod[:-1], (1, 0), value=1.0)
+        self.alphas_cumprod = torch.cumprod(self.alphas, dim=0).to(self.device)
+        self.alphas_cumprod_prev = F.pad(self.alphas_cumprod[:-1], (1, 0), value=1.0).to(self.device)
         self.sqrt_recip_alphas = torch.sqrt(1.0 / self.alphas)
         self.sqrt_alphas_cumprod = torch.sqrt(self.alphas_cumprod)
         self.sqrt_one_minus_alphas_cumprod = torch.sqrt(1. - self.alphas_cumprod)
         self.posterior_variance = self.betas * (1. - self.alphas_cumprod_prev) / (1. - self.alphas_cumprod)
 
-    def calc_loss(self, a, b):
+    def calc_loss(self, a, b, timestep):
+        a_t = get_index_from_list(self.alphas, timestep, timestep)
+        a_c_t = get_index_from_list(self.alphas_cumprod, timestep, timestep)
+        p_v_t = get_index_from_list(self.posterior_variance, timestep, timestep)
+        weight = (1 - a_t).pow(2) / (2 * a_t * (1 - a_c_t) * p_v_t)
+        weight[p_v_t == 0] = 1
         # return (a - b).exp().sum() + (b - a).exp().sum()
         # return F.l1_loss(a, b)
-        return (a - b).pow(2).sum()
+        losses = []
+        for i in range(weight.shape[0]):
+            losses.append((a[i] - b[i]).pow(2).sum() * weight[i])
+        return sum(losses)
 
     def make_sample(self, batch):
         batch = torch.cat([batch[:, :, :2], batch[:, :, :2], batch], dim=-1)

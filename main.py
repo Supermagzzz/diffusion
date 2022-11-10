@@ -6,7 +6,6 @@ import imageio.v2 as imageio
 import matplotlib.pyplot as plt
 
 common = Common()
-
 model = SimpleDenoiser(common)
 model = nn.DataParallel(model)
 model.to(common.device)
@@ -27,7 +26,6 @@ def print_example(data, index, all_losses):
     plt.figure(figsize=(15, 3))
     plt.plot(all_losses)
     plt.savefig('trash/loss' + str(index))
-
 all_losses = []
 for epoch in range(10000000):
     for step, batch in enumerate(common.dataloader):
@@ -39,8 +37,8 @@ for epoch in range(10000000):
 
         pred_noise = model(noised, t)
 
-        loss = common.calc_loss(noise, pred_noise)
-        baseline = common.calc_loss(noise, -real * common.know_level)
+        loss = common.calc_loss(noise, pred_noise, t)
+        baseline = common.calc_loss(noise, -real * common.know_level, t)
 
         all_losses.append((loss / baseline).item())
         loss.backward()
