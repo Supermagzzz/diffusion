@@ -21,14 +21,14 @@ def get_index_from_list(vals, t, x_shape):
 class Common:
     def __init__(self, check=False):
         self.N = 5
-        self.M = 8
+        self.M = 20
         self.HIDDEN = 512
         self.BLOCKS = 10000
         self.M_REAL = self.M * 6 + 6
         self.noise_level = 0.01
         self.know_level = 0.01
         self.batch_sz = 512
-        self.cpu_batch_sz = 1
+        self.cpu_batch_sz = 2
         self.apply_batch_sz = 5
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.dataset = CustomImageDataset('data/tensors')

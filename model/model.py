@@ -74,6 +74,10 @@ class SimpleDenoiser(nn.Module):
             nn.ReLU()
         ] for i in range(3)], []) + [nn.Linear(common.HIDDEN, 1)])
 
+    def make_seq(self, data, embeds):
+        data = data.reshape(embeds.shape[0], 1, self.common.HIDDEN)
+        return torch.cat([data for x in range(embeds.shape[1])], dim=1)
+
     def forward(self, svg, timestamp):
         batch_size = svg.shape[0]
         svg = svg.reshape(batch_size, self.common.N * self.common.M_REAL // 6, 6)
@@ -86,9 +90,7 @@ class SimpleDenoiser(nn.Module):
         coords = coords.reshape(batch_size, self.common.N * self.common.M_REAL // 6, self.common.HIDDEN * 6)
         embeds = self.w_coords(coords)
 
-        time_embed = F.embedding(timestamp, self.add_time_embed_table)
-        time_embed = time_embed.reshape(batch_size, 1, self.common.HIDDEN)
-        time_embed = torch.cat([time_embed for x in range(embeds.shape[1])], dim=1)
+        time_embed = self.make_seq(F.embedding(timestamp, self.add_time_embed_table), embeds)
 
         pos_embed = torch.Tensor([i for i in range(embeds.shape[1])]).long().to(self.device)
         pos_embed = self.pos_embed_table(pos_embed)
@@ -97,8 +99,8 @@ class SimpleDenoiser(nn.Module):
         embeds = self.unite_with_embeds(torch.cat([embeds, time_embed, pos_embed], dim=-1))
 
         out_embeds = self.get_time_embed_table(torch.cat([
-            torch.cat([F.embedding(timestamp, self.get_time_embed_table_normal) for i in range(embeds.shape[1])], dim=1),
-            torch.cat([self.get_time_embed_table_sinus(timestamp) for i in range(embeds.shape[1])], dim=1),
+            self.make_seq(F.embedding(timestamp, self.get_time_embed_table_normal), embeds),
+            self.make_seq(self.get_time_embed_table_sinus(timestamp), embeds),
             pos_embed
         ], dim=-1))
 
