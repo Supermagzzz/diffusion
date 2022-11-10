@@ -58,6 +58,7 @@ class Common:
         weight[p_v_t == 0] = 1
         # return (a - b).exp().sum() + (b - a).exp().sum()
         # return F.l1_loss(a, b)
+        # return (a - b).pow(2).sum()
         losses = []
         for i in range(weight.shape[0]):
             losses.append((a[i] - b[i]).pow(2).sum() * weight[i])
