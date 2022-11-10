@@ -59,10 +59,7 @@ class Common:
         # return (a - b).exp().sum() + (b - a).exp().sum()
         # return F.l1_loss(a, b)
         # return (a - b).pow(2).sum()
-        losses = []
-        for i in range(weight.shape[0]):
-            losses.append((a[i] - b[i]).pow(2).sum() * weight[i])
-        return sum(losses)
+        return torch.mul((a - b).pow(2).sum(axis=1), weight).sum()
 
     def make_sample(self, batch):
         batch = torch.cat([batch[:, :, :2], batch[:, :, :2], batch], dim=-1)
