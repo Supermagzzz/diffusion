@@ -69,8 +69,6 @@ class Common:
             self.sqrt_one_minus_alphas_cumprod, t, x_0.shape
         )
         # mean + variance
-        print(sqrt_alphas_cumprod_t)
-        print(sqrt_one_minus_alphas_cumprod_t)
         return sqrt_alphas_cumprod_t.to(self.device) * x_0.to(self.device) \
                + sqrt_one_minus_alphas_cumprod_t.to(self.device) * noise.to(self.device), noise.to(self.device)
 

@@ -31,7 +31,7 @@ class SimpleDenoiser(nn.Module):
         self.get_time_embed_table_normal = nn.Parameter(torch.normal(0, 1, (common.T, common.HIDDEN)), requires_grad=True)
         self.get_time_embed_table_sinus = SinusoidalPositionEmbeddings(common.HIDDEN)
         self.get_time_embed_table = nn.Sequential(
-            nn.Linear(common.HIDDEN * 2, common.HIDDEN),
+            nn.Linear(common.HIDDEN * 3, common.HIDDEN),
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU(),
@@ -95,9 +95,11 @@ class SimpleDenoiser(nn.Module):
         pos_embed = torch.stack([pos_embed for i in range(batch_size)])
 
         embeds = self.unite_with_embeds(torch.cat([embeds, time_embed, pos_embed], dim=-1))
+
         out_embeds = self.get_time_embed_table(torch.cat([
-            F.embedding(timestamp, self.get_time_embed_table_normal),
-            self.get_time_embed_table_sinus(timestamp)
+            torch.cat([F.embedding(timestamp, self.get_time_embed_table_normal) for i in range(embeds.shape[1])], dim=1),
+            torch.cat([self.get_time_embed_table_sinus(timestamp) for i in range(embeds.shape[1])], dim=1),
+            pos_embed
         ], dim=-1))
 
         noise_embeds = self.transformer(embeds, out_embeds)
