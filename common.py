@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from deepsvg.svglib.svg import SVG
 
 
-def linear_beta_schedule(timesteps, start=0.0001, end=0.1):
+def linear_beta_schedule(timesteps, start=0.0001, end=0.05):
     return torch.linspace(math.sqrt(start), math.sqrt(end), timesteps).pow(2)
 
 
@@ -21,7 +21,7 @@ def get_index_from_list(vals, t, x_shape):
 class Common:
     def __init__(self, check=False):
         self.N = 5
-        self.M = 20
+        self.M = 8
         self.HIDDEN = 512
         self.BLOCKS = 10000
         self.M_REAL = self.M * 6 + 6
@@ -38,7 +38,7 @@ class Common:
         else:
             self.real_batch_sz = self.cpu_batch_sz if self.device == "cpu" else self.batch_sz
 
-        self.dataloader = DataLoader(self.dataset, self.real_batch_sz, shuffle=True, drop_last=True)
+        self.dataloader = DataLoader(self.dataset, self.real_batch_sz, shuffle=False, drop_last=True)
 
         self.T = 300
         self.betas = linear_beta_schedule(timesteps=self.T)
