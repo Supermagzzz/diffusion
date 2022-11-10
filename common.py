@@ -21,7 +21,7 @@ def get_index_from_list(vals, t, x_shape):
 class Common:
     def __init__(self, check=False):
         self.N = 5
-        self.M = 20
+        self.M = 8 if torch.cuda.is_available() else 20
         self.HIDDEN = 256
         self.BLOCKS = 10000
         self.M_REAL = self.M * 6 + 6
