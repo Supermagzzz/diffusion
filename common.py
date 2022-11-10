@@ -50,18 +50,22 @@ class Common:
         self.sqrt_one_minus_alphas_cumprod = torch.sqrt(1. - self.alphas_cumprod)
         self.posterior_variance = self.betas * (1. - self.alphas_cumprod_prev) / (1. - self.alphas_cumprod)
 
-    def calc_loss(self, a, b, timestep):
+    @torch.no_grad()
+    def get_weight(self, timestep):
         a_t = get_index_from_list(self.alphas, timestep, timestep)
         a_c_t = get_index_from_list(self.alphas_cumprod, timestep, timestep)
         p_v_t = get_index_from_list(self.posterior_variance, timestep, timestep)
         weight = (1 - a_t).pow(2) / (2 * a_t * (1 - a_c_t) * p_v_t)
         weight[p_v_t == 0] = 1
+        return weight
+
+    def calc_loss(self, a, b, timestep):
         # return (a - b).exp().sum() + (b - a).exp().sum()
         # return F.l1_loss(a, b)
         # return (a - b).pow(2).sum()
         a = a.reshape(2, -1)
         b = b.reshape(2, -1)
-        return torch.mul((a - b).pow(2), weight).sum()
+        return ((a - b).pow(2) * self.get_weight(timestep)).sum()
 
     def make_sample(self, batch):
         batch = torch.cat([batch[:, :, :2], batch[:, :, :2], batch], dim=-1)
