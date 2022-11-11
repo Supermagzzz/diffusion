@@ -3,8 +3,6 @@ from torch import nn
 import torch.nn.functional as F
 import math
 
-import common
-
 
 class SinusoidalPositionEmbeddings(nn.Module):
     def __init__(self, dim):
@@ -43,7 +41,7 @@ class SimpleDenoiser(nn.Module):
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
         )
-        self.w_x = nn.Linear(common.BLOCKS, common.HIDDEN)
+        self.w_x = nn.Linear(common.BLOCKS, common.HIDDEN).to('cpu')
         self.unite_with_real_svg = nn.Sequential(
             nn.Linear(common.HIDDEN + 2, common.HIDDEN),
             nn.ReLU(),
@@ -60,11 +58,11 @@ class SimpleDenoiser(nn.Module):
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
         self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True, num_encoder_layers=12, num_decoder_layers=12)
-        self.make_probs = nn.Sequential(
-            nn.Softmax(),
-            nn.Linear(common.BLOCKS, common.HIDDEN),
-            nn.ReLU()
-        )
+        # self.make_probs = nn.Sequential(
+        #     nn.Softmax(),
+        #     nn.Linear(common.BLOCKS, common.HIDDEN),
+        #     nn.ReLU()
+        # )
         self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 2, common.HIDDEN * 6)] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
             nn.ReLU()

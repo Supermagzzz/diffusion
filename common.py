@@ -63,9 +63,9 @@ class Common:
         # return (a - b).exp().sum() + (b - a).exp().sum()
         # return F.l1_loss(a, b)
         # return (a - b).pow(2).sum()
-        a = a.reshape(2, -1)
-        b = b.reshape(2, -1)
-        return ((a - b).pow(2) * self.get_weight(timestep)).sum()
+        # a = a.reshape(2, -1)
+        # b = b.reshape(2, -1)
+        return (a - b).pow(2).sum()
 
     def make_sample(self, batch):
         batch = torch.cat([batch[:, :, :2], batch[:, :, :2], batch], dim=-1)
