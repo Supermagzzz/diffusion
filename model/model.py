@@ -57,7 +57,7 @@ class SimpleDenoiser(nn.Module):
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
-        self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True, num_encoder_layers=12, num_decoder_layers=12)
+        self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True)
         # self.make_probs = nn.Sequential(
         #     nn.Softmax(),
         #     nn.Linear(common.BLOCKS, common.HIDDEN),
