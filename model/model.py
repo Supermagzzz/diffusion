@@ -68,11 +68,11 @@ class SimpleDenoiser(nn.Module):
         self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 2, common.HIDDEN * 6), nn.Tanh()] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
             nn.ReLU()
-        ] for i in range(2)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6), nn.ReLU()])
+        ] for i in range(8)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6), nn.ReLU()])
         self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN), nn.Tanh()] + sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
-        ] for i in range(2)], []) + [nn.Linear(common.HIDDEN, 1)])
+        ] for i in range(8)], []) + [nn.Linear(common.HIDDEN, 1)])
 
     def make_seq(self, data, embeds):
         data = data.reshape(embeds.shape[0], 1, self.common.HIDDEN)
