@@ -39,7 +39,7 @@ class SimpleDenoiser(nn.Module):
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
         )
-        self.w_x = nn.Embedding(common.BLOCKS, common.HIDDEN).to('cpu')
+        self.w_x = nn.Embedding(common.BLOCKS, common.HIDDEN)
         self.unite_with_real_svg = nn.Sequential(
             nn.Linear(common.HIDDEN + 2, common.HIDDEN),
             nn.ReLU(),
@@ -69,7 +69,7 @@ class SimpleDenoiser(nn.Module):
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
             nn.ReLU()
         ] for i in range(2)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6), nn.ReLU()])
-        self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN * 3, common.HIDDEN), nn.Tanh()] + sum([[
+        self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN), nn.Tanh()] + sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
         ] for i in range(2)], []) + [nn.Linear(common.HIDDEN, 1)])
@@ -105,10 +105,8 @@ class SimpleDenoiser(nn.Module):
             pos_embed
         ], dim=-1))
 
-        svg = svg.reshape(batch_size, -1)
-        svg_long = torch.clamp((svg + self.range) / (2 * self.range) * self.common.BLOCKS, 0, self.common.BLOCKS - 1).long()
         noise_embeds = self.transformer(embeds, out_embeds)
-        coord_embed = torch.cat([noise_embeds, noise_embeds], dim=-1)
+        coord_embed = torch.cat([noise_embeds, embeds], dim=-1)
         for layer in self.make_coord_embed:
             coord_embed = layer(coord_embed)
         coord_embed = coord_embed.reshape(batch_size, self.common.N * self.common.M_REAL, self.common.HIDDEN)
@@ -116,7 +114,7 @@ class SimpleDenoiser(nn.Module):
         # prob_embeds = self.make_probs(torch.matmul(self.w_x, coord_embed.permute(0, 2, 1)).permute(0, 2, 1))
         # coord_prob_embeds = coord_embed * prob_embeds
         # noise_result = torch.cat([coord_embed, prob_embeds, coord_prob_embeds], dim=-1)
-        noise_result = torch.cat([coord_embed, coord_embed, coord_embed], dim=-1)
+        noise_result = coord_embed
         for layer in self.make_noise_result:
             noise_result = layer(noise_result)
         return noise_result.reshape(batch_size, self.common.N, self.common.M_REAL)
