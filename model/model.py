@@ -43,6 +43,11 @@ class SimpleDenoiser(nn.Module):
 
         self.w_x = nn.Embedding(common.BLOCKS, common.HIDDEN)
         self.point_encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=common.HIDDEN, nhead=8), num_layers=3)
+        self.encoder_unite = nn.Sequential(
+            nn.Linear(common.HIDDEN * 2, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN)
+        )
 
         self.unite_with_real_svg = nn.Sequential(
             nn.Linear(common.HIDDEN + 2, common.HIDDEN),
@@ -71,6 +76,11 @@ class SimpleDenoiser(nn.Module):
         ] for i in range(3)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6), nn.ReLU()])
 
         self.point_decoder = nn.TransformerDecoder(nn.TransformerDecoderLayer(d_model=common.HIDDEN, nhead=8), num_layers=3)
+        self.decoder_unite = nn.Sequential(
+            nn.Linear(common.HIDDEN * 2, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN)
+        )
 
         self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN), nn.Tanh()] + sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
@@ -88,7 +98,7 @@ class SimpleDenoiser(nn.Module):
         svg_long = torch.clamp((svg + self.range) / (2 * self.range) * self.common.BLOCKS, 0, self.common.BLOCKS - 1).long()
         svg_rem = torch.fmod((svg + self.range) / (2 * self.range) * self.common.BLOCKS, 1)
         encoded_coords = self.w_x(svg_long)
-        # encoded_coords = self.point_encoder(encoded_coords)
+        encoded_coords = self.encoder_unite(torch.cat([self.point_encoder(encoded_coords), encoded_coords], dim=-1))
 
         svg = svg.reshape(batch_size, self.common.N * self.common.M_REAL, 1)
         svg_rem = svg_rem.reshape(batch_size, self.common.N * self.common.M_REAL, 1)
@@ -120,7 +130,7 @@ class SimpleDenoiser(nn.Module):
         for layer in self.make_coord_embed:
             coord_embed = layer(coord_embed)
         coord_embed = coord_embed.reshape(batch_size, self.common.N * self.common.M_REAL, self.common.HIDDEN)
-        # coord_embed = self.point_decoder(coord_embed, encoded_coords)
+        coord_embed = self.decoder_unite(torch.cat([self.point_decoder(coord_embed, encoded_coords), coord_embed], dim=-1))
 
         noise_result = coord_embed
         for layer in self.make_noise_result:
