@@ -58,7 +58,7 @@ class SimpleDenoiser(nn.Module):
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
         # self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True)
-        self.transformer = T5ForConditionalGeneration(T5Config(common.BLOCKS))
+        self.transformer = T5ForConditionalGeneration(T5Config(common.BLOCKS, common.HIDDEN))
         # self.make_probs = nn.Sequential(
         #     nn.Softmax(),
         #     nn.Linear(common.BLOCKS, common.HIDDEN),
