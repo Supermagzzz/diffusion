@@ -52,7 +52,7 @@ class SimpleDenoiser(nn.Module):
             nn.ReLU()
         )
         self.unite_with_embeds = nn.Sequential(
-            nn.Linear(common.HIDDEN * 4, common.HIDDEN),
+            nn.Linear(common.HIDDEN * 3, common.HIDDEN),
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU(),
