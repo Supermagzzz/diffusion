@@ -28,7 +28,7 @@ class SimpleDenoiser(nn.Module):
         self.get_time_embed_table_normal = nn.Embedding(common.T, common.HIDDEN)
         self.get_time_embed_table_sinus = SinusoidalPositionEmbeddings(common.HIDDEN)
         self.get_time_embed_table = nn.Sequential(
-            nn.Linear(common.HIDDEN * 3, common.HIDDEN),
+            nn.Linear(common.HIDDEN * 4, common.HIDDEN),
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU(),
