@@ -9,6 +9,7 @@ common = Common()
 model = SimpleDenoiser(common)
 model = nn.DataParallel(model)
 model.to(common.device)
+model.w_x.to('cpu')
 #model.load_state_dict(torch.load('model_weights'), strict=False)
 print(common.device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=0.00001)
@@ -26,6 +27,8 @@ def print_example(data, index, all_losses):
     plt.figure(figsize=(15, 3))
     plt.plot(all_losses)
     plt.savefig('trash/loss' + str(index))
+
+
 all_losses = []
 for epoch in range(10000000):
     for step, batch in enumerate(common.dataloader):
