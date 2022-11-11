@@ -40,7 +40,7 @@ class Common:
 
         self.dataloader = DataLoader(self.dataset, self.real_batch_sz, shuffle=False, drop_last=True)
 
-        self.T = 300
+        self.T = 1000
         self.betas = linear_beta_schedule(timesteps=self.T).to(self.device)
         self.alphas = 1. - self.betas
         self.alphas_cumprod = torch.cumprod(self.alphas, dim=0).to(self.device)
