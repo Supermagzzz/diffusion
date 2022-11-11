@@ -41,7 +41,7 @@ class SimpleDenoiser(nn.Module):
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
         )
-        self.w_x = nn.Linear(common.BLOCKS, common.HIDDEN)
+        self.w_x = nn.Linear(common.BLOCKS, common.HIDDEN).to('cpu')
         self.unite_with_real_svg = nn.Sequential(
             nn.Linear(common.HIDDEN + 2, common.HIDDEN),
             nn.ReLU(),
