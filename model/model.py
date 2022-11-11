@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-import torch.nn.functional as F
+from transformers import T5ForConditionalGeneration, T5Config
 import math
 
 
@@ -29,7 +29,7 @@ class SimpleDenoiser(nn.Module):
         self.get_time_embed_table_normal = nn.Embedding(common.T, common.HIDDEN)
         self.get_time_embed_table_sinus = SinusoidalPositionEmbeddings(common.HIDDEN)
         self.get_time_embed_table = nn.Sequential(
-            nn.Linear(common.HIDDEN * 3, common.HIDDEN),
+            nn.Linear(common.HIDDEN * 4, common.HIDDEN),
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU(),
@@ -57,17 +57,18 @@ class SimpleDenoiser(nn.Module):
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
-        self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True)
+        # self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True)
+        self.transformer = T5ForConditionalGeneration(T5Config(common.BLOCKS))
         # self.make_probs = nn.Sequential(
         #     nn.Softmax(),
         #     nn.Linear(common.BLOCKS, common.HIDDEN),
         #     nn.ReLU()
         # )
-        self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 2, common.HIDDEN * 6)] + sum([[
+        self.make_coord_embed = nn.ModuleList([nn.Linear(common.BLOCKS, common.HIDDEN * 6)] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
             nn.ReLU()
         ] for i in range(3)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6)])
-        self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN * 3, common.HIDDEN)] + sum([[
+        self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN)] + sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
         ] for i in range(3)], []) + [nn.Linear(common.HIDDEN, 1)])
@@ -99,11 +100,12 @@ class SimpleDenoiser(nn.Module):
         out_embeds = self.get_time_embed_table(torch.cat([
             self.make_seq(self.get_time_embed_table_normal(timestamp), embeds),
             self.make_seq(self.get_time_embed_table_sinus(timestamp), embeds),
+            embeds,
             pos_embed
         ], dim=-1))
 
-        noise_embeds = self.transformer(embeds, out_embeds)
-        coord_embed = torch.cat([noise_embeds, embeds], dim=-1)
+        noise_embeds = self.transformer(inputs_embeds=embeds, decoder_inputs_embeds=out_embeds).logits
+        coord_embed = noise_embeds
         for layer in self.make_coord_embed:
             coord_embed = layer(coord_embed)
         coord_embed = coord_embed.reshape(batch_size, self.common.N * self.common.M_REAL, self.common.HIDDEN)
@@ -111,7 +113,7 @@ class SimpleDenoiser(nn.Module):
         # prob_embeds = self.make_probs(torch.matmul(self.w_x, coord_embed.permute(0, 2, 1)).permute(0, 2, 1))
         # coord_prob_embeds = coord_embed * prob_embeds
         # noise_result = torch.cat([coord_embed, prob_embeds, coord_prob_embeds], dim=-1)
-        noise_result = torch.cat([coord_embed, coord_embed, coord_embed], dim=-1)
+        noise_result = coord_embed
         for layer in self.make_noise_result:
             noise_result = layer(noise_result)
         return noise_result.reshape(batch_size, self.common.N, self.common.M_REAL)

@@ -22,8 +22,8 @@ class Common:
     def __init__(self, check=False):
         self.N = 5
         self.M = 8 if torch.cuda.is_available() else 20
-        self.HIDDEN = 256
-        self.BLOCKS = 100000
+        self.HIDDEN = 512
+        self.BLOCKS = 32128
         self.M_REAL = self.M * 6 + 6
         self.noise_level = 0.01
         self.know_level = 0.01
