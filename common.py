@@ -23,7 +23,7 @@ class Common:
         self.N = 5
         self.M = 8 if torch.cuda.is_available() else 20
         self.HIDDEN = 256
-        self.BLOCKS = 2 ** 16
+        self.BLOCKS = 2 ** 15
         self.M_REAL = self.M * 6 + 6
         self.noise_level = 0.01
         self.know_level = 0.01
@@ -40,7 +40,7 @@ class Common:
 
         self.dataloader = DataLoader(self.dataset, self.real_batch_sz, shuffle=False, drop_last=True)
 
-        self.T = 1000
+        self.T = 500
         self.betas = linear_beta_schedule(timesteps=self.T).to(self.device)
         self.alphas = 1. - self.betas
         self.alphas_cumprod = torch.cumprod(self.alphas, dim=0).to(self.device)

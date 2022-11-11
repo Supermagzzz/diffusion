@@ -42,7 +42,7 @@ class SimpleDenoiser(nn.Module):
         )
 
         self.w_x = nn.Embedding(common.BLOCKS, common.HIDDEN)
-        self.point_encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=common.HIDDEN, nhead=8), num_layers=6)
+        self.point_encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=common.HIDDEN, nhead=8), num_layers=3)
 
         self.unite_with_real_svg = nn.Sequential(
             nn.Linear(common.HIDDEN + 2, common.HIDDEN),
@@ -56,7 +56,7 @@ class SimpleDenoiser(nn.Module):
             nn.ReLU()
         )
         self.unite_with_embeds = nn.Sequential(
-            nn.Linear(common.HIDDEN * 3, common.HIDDEN),
+            nn.Linear(common.HIDDEN * 4, common.HIDDEN),
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU(),
@@ -68,14 +68,14 @@ class SimpleDenoiser(nn.Module):
         self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 2, common.HIDDEN * 6), nn.Tanh()] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
             nn.ReLU()
-        ] for i in range(2)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6), nn.ReLU()])
+        ] for i in range(3)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6), nn.ReLU()])
 
-        self.point_decoder = nn.TransformerDecoder(nn.TransformerDecoderLayer(d_model=common.HIDDEN, nhead=8), num_layers=6)
+        self.point_decoder = nn.TransformerDecoder(nn.TransformerDecoderLayer(d_model=common.HIDDEN, nhead=8), num_layers=3)
 
         self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN), nn.Tanh()] + sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
-        ] for i in range(2)], []) + [nn.Linear(common.HIDDEN, 1)])
+        ] for i in range(3)], []) + [nn.Linear(common.HIDDEN, 1)])
 
     def make_seq(self, data, embeds):
         data = data.reshape(embeds.shape[0], 1, self.common.HIDDEN)
@@ -87,7 +87,8 @@ class SimpleDenoiser(nn.Module):
         svg = svg.reshape(batch_size, self.common.N * self.common.M_REAL)
         svg_long = torch.clamp((svg + self.range) / (2 * self.range) * self.common.BLOCKS, 0, self.common.BLOCKS - 1).long()
         svg_rem = torch.fmod((svg + self.range) / (2 * self.range) * self.common.BLOCKS, 1)
-        encoded_coords = self.point_encoder(self.w_x(svg_long).to(self.device))
+        encoded_coords = self.w_x(svg_long)
+        # encoded_coords = self.point_encoder(encoded_coords)
 
         svg = svg.reshape(batch_size, self.common.N * self.common.M_REAL, 1)
         svg_rem = svg_rem.reshape(batch_size, self.common.N * self.common.M_REAL, 1)
@@ -95,13 +96,16 @@ class SimpleDenoiser(nn.Module):
         coords = coords.reshape(batch_size, self.common.N * self.common.M_REAL // 6, self.common.HIDDEN * 6)
 
         embeds = self.w_coords(coords)
-        time_embed = self.make_seq(self.add_time_embed_table(timestamp), embeds)
 
         pos_embed = torch.Tensor([i for i in range(embeds.shape[1])]).long().to(self.device)
         pos_embed = self.pos_embed_table(pos_embed)
         pos_embed = torch.stack([pos_embed for i in range(batch_size)])
 
-        embeds = self.unite_with_embeds(torch.cat([embeds, time_embed, pos_embed], dim=-1))
+        embeds = self.unite_with_embeds(torch.cat([
+            self.make_seq(self.add_time_embed_table(timestamp), embeds),
+            self.make_seq(self.get_time_embed_table_sinus(timestamp), embeds),
+            embeds, pos_embed
+        ], dim=-1))
 
         out_embeds = self.get_time_embed_table(torch.cat([
             self.make_seq(self.get_time_embed_table_normal(timestamp), embeds),
@@ -116,7 +120,7 @@ class SimpleDenoiser(nn.Module):
         for layer in self.make_coord_embed:
             coord_embed = layer(coord_embed)
         coord_embed = coord_embed.reshape(batch_size, self.common.N * self.common.M_REAL, self.common.HIDDEN)
-        coord_embed = self.point_decoder(coord_embed, encoded_coords)
+        # coord_embed = self.point_decoder(coord_embed, encoded_coords)
 
         noise_result = coord_embed
         for layer in self.make_noise_result:
