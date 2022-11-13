@@ -82,7 +82,7 @@ class SimpleDenoiser(nn.Module):
         #     nn.Linear(common.HIDDEN, common.HIDDEN)
         # )
 
-        self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN) + sum([[
+        self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN)] + sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
         ] for i in range(2)], []) + [nn.Linear(common.HIDDEN, 1)])
