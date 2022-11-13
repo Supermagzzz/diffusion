@@ -70,7 +70,7 @@ class SimpleDenoiser(nn.Module):
 
         self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True, num_encoder_layers=12, num_decoder_layers=12)
 
-        self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN * 6), nn.Tanh()] + sum([[
+        self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN * 6)] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
             nn.ReLU()
         ] for i in range(2)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6), nn.ReLU()])
@@ -82,7 +82,7 @@ class SimpleDenoiser(nn.Module):
         #     nn.Linear(common.HIDDEN, common.HIDDEN)
         # )
 
-        self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN), nn.Tanh()] + sum([[
+        self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN) + sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
         ] for i in range(2)], []) + [nn.Linear(common.HIDDEN, 1)])
