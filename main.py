@@ -5,6 +5,8 @@ from common import Common
 import imageio.v2 as imageio
 import matplotlib.pyplot as plt
 
+torch.set_default_dtype(torch.float32)
+
 common = Common()
 model = SimpleDenoiser(common)
 model = nn.DataParallel(model)
