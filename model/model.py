@@ -118,8 +118,8 @@ class SimpleDenoiser(nn.Module):
             embeds, pos_embed
         ], dim=-1))
 
-        out_embeds = self.unite_with_embeds(torch.cat([
-            self.make_seq(self.get_time_embed_table(timestamp), embeds),
+        out_embeds = self.get_time_embed_table(torch.cat([
+            self.make_seq(self.get_time_embed_table_normal(timestamp), embeds),
             # self.make_seq(self.get_time_embed_table_sinus(timestamp), embeds),
             embeds, pos_embed
         ], dim=-1))
