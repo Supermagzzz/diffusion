@@ -8,8 +8,8 @@ import torch.nn.functional as F
 from deepsvg.svglib.svg import SVG
 
 
-def linear_beta_schedule(timesteps, start=0.0001, end=0.05):
-    return torch.linspace(math.sqrt(start), math.sqrt(end), timesteps).pow(2)
+def linear_beta_schedule(timesteps, start=0.0001, end=0.03):
+    return torch.linspace(start, end, timesteps)
 
 
 def get_index_from_list(vals, t, x_shape):

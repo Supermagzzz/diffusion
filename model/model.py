@@ -26,15 +26,15 @@ class SimpleDenoiser(nn.Module):
         self.device = common.device
 
         self.add_time_embed_table = nn.Embedding(common.T, common.HIDDEN)
-        # self.get_time_embed_table_normal = nn.Embedding(common.T, common.HIDDEN)
+        self.get_time_embed_table_normal = nn.Embedding(common.T, common.HIDDEN)
         # self.get_time_embed_table_sinus = SinusoidalPositionEmbeddings(common.HIDDEN)
-        # self.get_time_embed_table = nn.Sequential(
-        #     nn.Linear(common.HIDDEN * 4, common.HIDDEN),
-        #     nn.ReLU(),
-        #     nn.Linear(common.HIDDEN, common.HIDDEN),
-        #     nn.ReLU(),
-        #     nn.Linear(common.HIDDEN, common.HIDDEN)
-        # )
+        self.get_time_embed_table = nn.Sequential(
+            nn.Linear(common.HIDDEN * 3, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN)
+        )
         self.pos_embed_table = nn.Sequential(
             SinusoidalPositionEmbeddings(common.HIDDEN),
             nn.Linear(common.HIDDEN, common.HIDDEN),
@@ -70,7 +70,7 @@ class SimpleDenoiser(nn.Module):
 
         self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True, num_encoder_layers=12, num_decoder_layers=12)
 
-        self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN * 6)] + sum([[
+        self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN * 6), nn.ReLU()] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
             nn.ReLU()
         ] for i in range(2)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6), nn.ReLU()])
@@ -82,7 +82,7 @@ class SimpleDenoiser(nn.Module):
         #     nn.Linear(common.HIDDEN, common.HIDDEN)
         # )
 
-        self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN)] + sum([[
+        self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN), nn.ReLU()] + sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
         ] for i in range(2)], []) + [nn.Linear(common.HIDDEN, 1)])
@@ -118,6 +118,12 @@ class SimpleDenoiser(nn.Module):
             embeds, pos_embed
         ], dim=-1))
 
+        out_embeds = self.unite_with_embeds(torch.cat([
+            self.make_seq(self.get_time_embed_table(timestamp), embeds),
+            # self.make_seq(self.get_time_embed_table_sinus(timestamp), embeds),
+            embeds, pos_embed
+        ], dim=-1))
+
         # out_embeds = self.get_time_embed_table(torch.cat([
         #     self.make_seq(self.get_time_embed_table_normal(timestamp), embeds),
         #     self.make_seq(self.get_time_embed_table_sinus(timestamp), embeds),
@@ -126,7 +132,7 @@ class SimpleDenoiser(nn.Module):
         # ], dim=-1))
 
         # noise_embeds = self.transformer(embeds, out_embeds)
-        noise_embeds = self.transformer(embeds, embeds)
+        noise_embeds = self.transformer(embeds, out_embeds)
 
         # coord_embed = torch.cat([noise_embeds, embeds], dim=-1)
         coord_embed = noise_embeds
