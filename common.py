@@ -23,7 +23,7 @@ class Common:
         self.N = 5
         self.M = 8 if torch.cuda.is_available() else 20
         self.HIDDEN = 512
-        self.BLOCKS = 2 ** 15
+        self.BLOCKS = 100000
         self.M_REAL = self.M * 6 + 6
         self.noise_level = 0.01
         self.know_level = 0.01
