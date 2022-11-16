@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from transformers import BertConfig, BertModel
+from transformers import T5ForConditionalGeneration, T5Config
 import math
 
 
@@ -69,8 +69,7 @@ class SimpleDenoiser(nn.Module):
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
 
-        # self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True, num_encoder_layers=12, num_decoder_layers=12)
-        self.transformer = BertModel(BertConfig(common.BLOCKS, common.HIDDEN, num_attention_heads=8, num_hidden_layers=12, max_position_embeddings=self.common.N * self.common.M_REAL // 6))
+        self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True, num_encoder_layers=12, num_decoder_layers=12)
 
         self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 2, common.HIDDEN * 6), nn.ReLU()] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
@@ -134,7 +133,7 @@ class SimpleDenoiser(nn.Module):
         # ], dim=-1))
 
         # noise_embeds = self.transformer(embeds, out_embeds)
-        noise_embeds = self.transformer(inputs_embeds=embeds).last_hidden_state
+        noise_embeds = self.transformer(embeds, out_embeds)
 
         coord_embed = torch.cat([noise_embeds, embeds], dim=-1)
         # coord_embed = noise_embeds
