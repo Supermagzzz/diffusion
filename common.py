@@ -67,17 +67,17 @@ class Common:
 
         loss = torch.Tensor([0]).to(self.device)
         delta = a - b
-        for x in delta:
+        for i in range(delta.shape[0]):
             for row in range(delta.shape[1]):
                 for ind in range(6, delta.shape[2], 6):
-                    ax = x[row][ind-2]
-                    ay = x[row][ind-1]
-                    bx = x[row][ind+0]
-                    by = x[row][ind+1]
-                    cx = x[row][ind+2]
-                    cy = x[row][ind+3]
-                    dx = x[row][ind+4]
-                    dy = x[row][ind+5]
+                    ax = delta[i][row][ind-2]
+                    ay = delta[i][row][ind-1]
+                    bx = delta[i][row][ind+0]
+                    by = delta[i][row][ind+1]
+                    cx = delta[i][row][ind+2]
+                    cy = delta[i][row][ind+3]
+                    dx = delta[i][row][ind+4]
+                    dy = delta[i][row][ind+5]
                     loss += under_curse_loss(ax, bx, cx, dx) + under_curse_loss(ay, by, cy, dy)
         return loss
 
