@@ -65,7 +65,7 @@ class Common:
                 a * (81 * b + 25 * c + 15 * d) +
                 33 * b * c + 24 * b * d + 10 * c * d) / 70
 
-        loss = torch.Tensor([0])
+        loss = torch.Tensor([0]).to(self.device)
         delta = a - b
         for x in delta:
             for row in range(delta.shape[1]):
