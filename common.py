@@ -58,7 +58,6 @@ class Common:
         weight[p_v_t == 0] = 1
         return weight
 
-
     def calc_bezier_loss(self, a, b):
         def under_curse_loss(a, b, c, d):
             return \
@@ -66,21 +65,21 @@ class Common:
                 a * (81 * b + 25 * c + 15 * d) +
                 33 * b * c + 24 * b * d + 10 * c * d) / 70
 
-        loss = []
+        loss = torch.Tensor([0])
         delta = a - b
-        for i in range(delta.shape[0]):
+        for x in delta:
             for row in range(delta.shape[1]):
                 for ind in range(6, delta.shape[2], 6):
-                    ax = delta[i][row][ind-2]
-                    ay = delta[i][row][ind-1]
-                    bx = delta[i][row][ind+0]
-                    by = delta[i][row][ind+1]
-                    cx = delta[i][row][ind+2]
-                    cy = delta[i][row][ind+3]
-                    dx = delta[i][row][ind+4]
-                    dy = delta[i][row][ind+5]
-                    loss.append(under_curse_loss(ax, bx, cx, dx) + under_curse_loss(ay, by, cy, dy))
-        return sum(loss)
+                    ax = x[row][ind-2]
+                    ay = x[row][ind-1]
+                    bx = x[row][ind+0]
+                    by = x[row][ind+1]
+                    cx = x[row][ind+2]
+                    cy = x[row][ind+3]
+                    dx = x[row][ind+4]
+                    dy = x[row][ind+5]
+                    loss += under_curse_loss(ax, bx, cx, dx) + under_curse_loss(ay, by, cy, dy)
+        return loss
 
     def calc_loss(self, a, b):
         # return (a - b).exp().sum() + (b - a).exp().sum()

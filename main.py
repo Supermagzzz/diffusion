@@ -47,7 +47,6 @@ for epoch in range(10000000):
         #     baseline = common.calc_loss(noise, -real * common.know_level)
 
         loss = common.calc_bezier_loss(common.sample_x0(noised, t, noise), common.sample_x0(noised, t, pred_noise))
-        # if baseline == 0:
         baseline = common.calc_bezier_loss(common.sample_x0(noised, t, noise), common.sample_x0(noised, t, -real * common.know_level))
 
         all_losses.append((loss / baseline).item())
