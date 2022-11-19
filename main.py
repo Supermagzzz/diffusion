@@ -43,8 +43,7 @@ for epoch in range(10000000):
         pred_noise = model(noised, t)
 
         loss = common.calc_loss(noise, pred_noise)
-        if baseline != 0:
-            baseline = common.calc_loss(noise, -real * common.know_level)
+        baseline = common.calc_loss(noise, -real * common.know_level)
 
         all_losses.append((loss / baseline).item())
         loss.backward()
