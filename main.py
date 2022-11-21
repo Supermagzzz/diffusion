@@ -1,6 +1,12 @@
+import math
+import random
+
 import torch
 from torch import nn
+from torch.nn import BCELoss
+
 from model.model import SimpleDenoiser
+from model.discriminator import SimpleDiscriminator
 from common import Common
 import imageio.v2 as imageio
 import matplotlib.pyplot as plt
@@ -8,29 +14,63 @@ import matplotlib.pyplot as plt
 torch.set_default_dtype(torch.float32)
 
 common = Common()
-model = SimpleDenoiser(common)
-model = nn.DataParallel(model)
-model.to(common.device)
-#model.load_state_dict(torch.load('model_weights'), strict=False)
+autoencoder = SimpleDenoiser(common)
+autoencoder = nn.DataParallel(autoencoder)
+autoencoder.to(common.device)
+#autoencoder.load_state_dict(torch.load('autoencoder_weights'), strict=False)
+
+discriminator = SimpleDiscriminator(common)
+discriminator = nn.DataParallel(discriminator)
+discriminator.to(common.device)
+#discriminator.load_state_dict(torch.load('discriminator_weights'), strict=False)
+
 print(common.device)
-optimizer = torch.optim.AdamW(model.parameters(), lr=0.00001)
+optimizer_encoder = torch.optim.AdamW(autoencoder.parameters(), lr=0.00001)
+optimizer_discriminator = torch.optim.AdamW(discriminator.parameters(), lr=0.00001)
+
+bce = BCELoss()
 
 all_losses = []
 baseline = 0
 for epoch in range(10000000):
     for step, batch in enumerate(common.dataloader):
+        batch_size = batch.shape[0]
         real = common.make_sample(batch)
-        optimizer.zero_grad()
 
-        pred = model(real)
+        # train discriminator
+        optimizer_encoder.zero_grad()
+        optimizer_discriminator.zero_grad()
 
-        loss = common.calc_loss(pred, real)
+        pred = autoencoder(real)
 
-        all_losses.append(loss.item())
-        loss.backward()
-        optimizer.step()
-        print(epoch, loss.item())
+        real_prob = discriminator(real)
+        fake_prob = discriminator(pred)
+
+        real_label = torch.ones((batch_size,), dtype=torch.float, device=common.device)
+        fake_label = torch.zeros((batch_size,), dtype=torch.float, device=common.device)
+
+        loss_discriminator = bce(real_label, real_prob) + bce(fake_label, fake_prob)
+        loss_discriminator.backward()
+        optimizer_discriminator.step()
+
+        # train autoencoder
+        optimizer_encoder.zero_grad()
+        optimizer_discriminator.zero_grad()
+
+        pred = autoencoder(real)
+
+        fake_prob = discriminator(pred)
+        real_label = torch.ones((batch_size,), dtype=torch.float, device=common.device)
+        loss_mse = common.calc_loss(pred, real)
+        loss_gan = bce(real_label, fake_prob)
+        loss_autoencoder = loss_mse + loss_gan
+        loss_autoencoder.backward()
+        optimizer_encoder.step()
+
+        all_losses.append(torch.log(loss_autoencoder).item())
+        print(epoch, loss_autoencoder.item(), loss_discriminator.item(), loss_mse.item(), loss_gan.item())
 
     if epoch % 100 == 0:
-        torch.save(model.state_dict(), 'model_weights')
+        torch.save(autoencoder.state_dict(), 'autoencoder_weights')
+        torch.save(discriminator.state_dict(), 'discriminator_weights')
         print('saved')
