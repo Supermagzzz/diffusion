@@ -38,6 +38,6 @@ for i in trange(common.T - 1, -1, -1):
     for step, batch in enumerate(common.dataloader):
         real = common.make_sample(batch)
         data.append(real[0])
-        pred = model(batch)
+        pred = model(real)
         data.append(pred)
 print_example(data)
