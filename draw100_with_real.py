@@ -13,7 +13,7 @@ common = Common(check=True)
 model = SimpleDenoiser(common)
 model = nn.DataParallel(model)
 model.to(common.device)
-model.load_state_dict(torch.load('model_weights'), strict=False)
+# model.load_state_dict(torch.load('model_weights'), strict=False)
 model.eval()
 print(common.device)
 
@@ -34,11 +34,12 @@ def print_example(data):
 img = torch.randn((100, common.N, common.M_REAL), device=common.device)
 step = common.T // 10
 data = []
-for step, batch in enumerate(common.dataloader):
+it = enumerate(common.dataloader)
+for i in trange(50):
+    step, batch = next(it)
+    print(batch.shape)
     real = common.make_sample(batch)
     data.append(real[0])
     pred = model(real)
     data.append(pred)
-    if step == 50:
-        break
 print_example(data)
