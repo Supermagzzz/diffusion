@@ -12,7 +12,7 @@ class CustomImageDataset(Dataset):
                 img_path = os.path.join(img_dir, i)
                 data = pickle.load(open(img_path, 'rb'))
                 self.images.append((img_path, data))
-        self.images.sort(key=lambda path, im: hash(path))
+        self.images.sort(key=lambda path_and_im: hash(path_and_im[0]))
 
         self.train = self.images[:int(len(self.images) * 0.9)]
         self.test = self.images[int(len(self.images) * 0.9):]
@@ -24,4 +24,4 @@ class CustomImageDataset(Dataset):
         return len(self.images)
 
     def __getitem__(self, idx):
-        return self.images[idx]
+        return self.images[idx][0]
