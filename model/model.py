@@ -22,67 +22,66 @@ class SinusoidalPositionEmbeddings(nn.Module):
 class SimpleDenoiser(nn.Module):
     def __init__(self, common):
         super().__init__()
+
         self.range = 4
         self.common = common
         self.device = common.device
 
-        self.add_time_embed_table = nn.Embedding(common.T, common.HIDDEN)
-        self.get_time_embed_table_normal = nn.Embedding(common.T, common.HIDDEN)
-        # self.get_time_embed_table_sinus = SinusoidalPositionEmbeddings(common.HIDDEN)
-        self.get_time_embed_table = nn.Sequential(
-            nn.Linear(common.HIDDEN * 3, common.HIDDEN),
-            nn.ReLU(),
-            nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.ReLU(),
-            nn.Linear(common.HIDDEN, common.HIDDEN)
-        )
+        self.pos_embed_learned_table = nn.Embedding(self.common.N * self.common.M_REAL // 6, common.HIDDEN)
         self.pos_embed_table = nn.Sequential(
             SinusoidalPositionEmbeddings(common.HIDDEN),
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU()
         )
+        self.unite_pos = nn.Sequential(
+            nn.Linear(common.HIDDEN * 2, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+        )
 
         self.w_x = nn.Embedding(common.BLOCKS, common.HIDDEN)
-        # self.point_encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=common.HIDDEN, nhead=8), num_layers=3)
-        # self.encoder_unite = nn.Sequential(
-        #     nn.Linear(common.HIDDEN * 2, common.HIDDEN),
-        #     nn.ReLU(),
-        #     nn.Linear(common.HIDDEN, common.HIDDEN)
-        # )
 
-        # self.unite_with_real_svg = nn.Sequential(
-        #     nn.Linear(common.HIDDEN + 2, common.HIDDEN),
-        #     nn.ReLU(),
-        #     nn.Linear(common.HIDDEN, common.HIDDEN),
-        #     nn.ReLU(),
-        #     nn.Linear(common.HIDDEN, common.HIDDEN)
-        # )
         self.w_coords = nn.Sequential(
             nn.Linear(common.HIDDEN * 6, common.HIDDEN),
             nn.ReLU()
         )
-        self.unite_with_embeds = nn.Sequential(
-            nn.Linear(common.HIDDEN * 3, common.HIDDEN),
+        self.make_in_embed = nn.Sequential(
+            nn.Linear(common.HIDDEN * 2, common.HIDDEN),
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
 
-        # self.transformer = nn.Transformer(d_model=common.HIDDEN, dtype=torch.float, batch_first=True, num_encoder_layers=12, num_decoder_layers=12)
-        self.transformer = BertModel(BertConfig(common.BLOCKS, common.HIDDEN, num_attention_heads=8, num_hidden_layers=12, max_position_embeddings=self.common.N * self.common.M_REAL // 6))
+        self.make_out_embed = nn.Sequential(
+            nn.Linear(common.HIDDEN * 2, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN)
+        )
+
+        self.cls_token = nn.Embedding(1, common.HIDDEN)
+        self.encoder = BertModel(BertConfig(common.BLOCKS, common.HIDDEN, num_attention_heads=8, num_hidden_layers=12,
+                                            max_position_embeddings=self.common.N * self.common.M_REAL // 6 + 1))
+
+        self.transform_embed = nn.Sequential(
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+        )
+
+        self.decoder = BertModel(BertConfig(common.BLOCKS, common.HIDDEN, num_attention_heads=8, num_hidden_layers=12,
+                                            max_position_embeddings=self.common.N * self.common.M_REAL // 6))
 
         self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 2, common.HIDDEN * 6), nn.ReLU()] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
             nn.ReLU()
         ] for i in range(2)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6), nn.ReLU()])
-
-        # self.point_decoder = nn.TransformerDecoder(nn.TransformerDecoderLayer(d_model=common.HIDDEN, nhead=8), num_layers=3)
-        # self.decoder_unite = nn.Sequential(
-        #     nn.Linear(common.HIDDEN * 2, common.HIDDEN),
-        #     nn.ReLU(),
-        #     nn.Linear(common.HIDDEN, common.HIDDEN)
-        # )
 
         self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN), nn.ReLU()] + sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
@@ -93,55 +92,45 @@ class SimpleDenoiser(nn.Module):
         data = data.reshape(embeds.shape[0], 1, self.common.HIDDEN)
         return torch.cat([data for x in range(embeds.shape[1])], dim=1)
 
-    def forward(self, svg, timestamp):
+    def make_batch(self, data, batch_size):
+        return torch.stack([data for x in range(batch_size)])
+
+    def forward(self, svg):
         batch_size = svg.shape[0]
 
         svg = svg.reshape(batch_size, self.common.N * self.common.M_REAL)
-        svg_long = torch.clamp((svg + self.range) / (2 * self.range) * self.common.BLOCKS, 0, self.common.BLOCKS - 1).long()
-        # svg_rem = torch.fmod((svg + self.range) / (2 * self.range) * self.common.BLOCKS, 1)
+        svg_long = torch.clamp((svg + self.range) / (2 * self.range) * self.common.BLOCKS, 0,
+                               self.common.BLOCKS - 1).long()
         encoded_coords = self.w_x(svg_long)
-        # encoded_coords = self.encoder_unite(torch.cat([self.point_encoder(encoded_coords), encoded_coords], dim=-1))
 
-        # svg = svg.reshape(batch_size, self.common.N * self.common.M_REAL, 1)
-        # svg_rem = svg_rem.reshape(batch_size, self.common.N * self.common.M_REAL, 1)
-        # coords = self.unite_with_real_svg(torch.cat([encoded_coords, svg, svg_rem], dim=-1))
-        # coords = coords.reshape(batch_size, self.common.N * self.common.M_REAL // 6, self.common.HIDDEN * 6)
         coords = encoded_coords.reshape(batch_size, self.common.N * self.common.M_REAL // 6, self.common.HIDDEN * 6)
 
         embeds = self.w_coords(coords)
 
         pos_embed = torch.Tensor([i for i in range(embeds.shape[1])]).long().to(self.device)
-        pos_embed = self.pos_embed_table(pos_embed)
-        pos_embed = torch.stack([pos_embed for i in range(batch_size)])
+        pos_embed = self.make_batch(self.unite_pos(
+            torch.cat([self.pos_embed_table(pos_embed), self.pos_embed_learned_table(pos_embed)], dim=-1)), batch_size)
 
-        embeds = self.unite_with_embeds(torch.cat([
-            self.make_seq(self.add_time_embed_table(timestamp), embeds),
-            # self.make_seq(self.get_time_embed_table_sinus(timestamp), embeds),
-            embeds, pos_embed
+        embeds = self.make_in_embed(torch.cat([
+            embeds,
+            pos_embed
         ], dim=-1))
 
-        out_embeds = self.get_time_embed_table(torch.cat([
-            self.make_seq(self.get_time_embed_table_normal(timestamp), embeds),
-            # self.make_seq(self.get_time_embed_table_sinus(timestamp), embeds),
-            embeds, pos_embed
+        cls_token = self.make_batch(self.cls_token(torch.LongTensor([0])), batch_size)
+        latent_embed = self.encoder(inputs_embeds=torch.cat([cls_token, embeds], dim=1)).last_hidden_state[:, 0, :]
+        latent_embed = self.transform_embed(latent_embed)
+
+        out_embeds = self.make_out_embed(torch.cat([
+            self.make_seq(latent_embed, embeds),
+            pos_embed
         ], dim=-1))
 
-        # out_embeds = self.get_time_embed_table(torch.cat([
-        #     self.make_seq(self.get_time_embed_table_normal(timestamp), embeds),
-        #     self.make_seq(self.get_time_embed_table_sinus(timestamp), embeds),
-        #     embeds,
-        #     pos_embed
-        # ], dim=-1))
-
-        # noise_embeds = self.transformer(embeds, out_embeds)
-        noise_embeds = self.transformer(inputs_embeds=embeds).last_hidden_state
+        noise_embeds = self.decoder(inputs_embeds=out_embeds).last_hidden_state
 
         coord_embed = torch.cat([noise_embeds, embeds], dim=-1)
-        # coord_embed = noise_embeds
         for layer in self.make_coord_embed:
             coord_embed = layer(coord_embed)
         coord_embed = coord_embed.reshape(batch_size, self.common.N * self.common.M_REAL, self.common.HIDDEN)
-        # coord_embed = self.decoder_unite(torch.cat([self.point_decoder(coord_embed, encoded_coords), coord_embed], dim=-1))
 
         noise_result = coord_embed
         for layer in self.make_noise_result:
