@@ -67,7 +67,7 @@ for epoch in range(10000000):
 
         fake_prob = sigmoid(discriminator(pred))
         real_label = torch.ones((batch_size,), dtype=torch.float, device=common.device)
-        loss_mse = -torch.log(common.calc_loss(pred, real))
+        loss_mse = common.calc_loss(pred, real) * 50
         loss_gan = bce(fake_prob, real_label)
         loss_autoencoder = loss_mse + loss_gan
         loss_autoencoder.backward()
