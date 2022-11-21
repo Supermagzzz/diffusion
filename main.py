@@ -44,8 +44,7 @@ for epoch in range(10000000):
         real = common.make_sample(batch)
 
         # train discriminator
-        optimizer_encoder.zero_grad()
-        optimizer_discriminator.zero_grad()
+        discriminator.zero_grad()
 
         pred = autoencoder(real)
 
@@ -59,6 +58,8 @@ for epoch in range(10000000):
         loss_discriminator.backward()
         optimizer_discriminator.step()
 
+        autoencoder.zero_grad()
+        fake_prob = sigmoid(discriminator(pred))
         loss_mse = common.calc_loss(pred, real) * 50
         loss_gan = bce(fake_prob, real_label)
         loss_autoencoder = loss_mse + loss_gan
