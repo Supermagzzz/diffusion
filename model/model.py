@@ -116,7 +116,7 @@ class SimpleDenoiser(nn.Module):
             pos_embed
         ], dim=-1))
 
-        cls_token = self.make_batch(self.cls_token(torch.LongTensor([0])), batch_size)
+        cls_token = self.make_batch(self.cls_token(torch.LongTensor([0]).to(self.device)), batch_size)
         latent_embed = self.encoder(inputs_embeds=torch.cat([cls_token, embeds], dim=1)).last_hidden_state[:, 0, :]
         latent_embed = self.transform_embed(latent_embed)
 
