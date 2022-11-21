@@ -29,7 +29,7 @@ class Common:
         self.cpu_batch_sz = 2
         self.apply_batch_sz = 1
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.dataset = CustomImageDataset('data/tensors')
+        self.dataset = CustomImageDataset('data/tensors', not check)
 
         if check:
             self.real_batch_sz = self.apply_batch_sz
