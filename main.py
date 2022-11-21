@@ -48,7 +48,7 @@ for epoch in range(10000000):
         fake_label = torch.zeros((batch_size,), dtype=torch.float, device=common.device)
 
         # train discriminator
-        if len(discriminator_loss) == 0 or gan_loss[-1] < 3:
+        if len(discriminator_loss) == 0 or gan_loss[-1] < 2:
             discriminator.zero_grad()
             real_prob = sigmoid(discriminator(real))
             fake_prob = sigmoid(discriminator(pred))
