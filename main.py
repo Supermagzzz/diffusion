@@ -79,6 +79,6 @@ for epoch in range(10000000):
         plt.plot(discriminator_loss, label='discriminator_loss')
         plt.plot(mse_loss, label='mse_loss')
         plt.plot(gan_loss, label='gan_loss')
-        plt.savefig('trash/gan' + str(epoch // 100) + '.png')
         plt.legend()
+        plt.savefig('trash/gan' + str(epoch // 100) + '.png')
         print('saved')
