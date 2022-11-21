@@ -33,7 +33,10 @@ def sigmoid(x):
 
 bce = BCELoss()
 
-all_losses = []
+autoencoder_loss = []
+discriminator_loss = []
+mse_loss = []
+gan_loss = []
 baseline = 0
 for epoch in range(10000000):
     for step, batch in enumerate(common.dataloader):
@@ -70,10 +73,18 @@ for epoch in range(10000000):
         loss_autoencoder.backward()
         optimizer_encoder.step()
 
-        all_losses.append(torch.log(loss_autoencoder))
+        autoencoder_loss.append(loss_autoencoder.item())
+        discriminator_loss.append(loss_discriminator.item())
+        mse_loss.append(loss_mse.item())
+        gan_loss.append(loss_gan.item())
         print(epoch, loss_autoencoder.item(), loss_discriminator.item(), loss_mse.item(), loss_gan.item())
 
     if epoch % 100 == 0:
         torch.save(autoencoder.state_dict(), 'autoencoder_weights')
         torch.save(discriminator.state_dict(), 'discriminator_weights')
+        plt.plot(autoencoder_loss, label='autoencoder_loss')
+        plt.plot(discriminator_loss, label='discriminator_loss')
+        plt.plot(mse_loss, label='mse_loss')
+        plt.plot(gan_loss, label='gan_loss')
+        plt.savefig('trash/gan' + str(epoch // 100) + '.png')
         print('saved')
