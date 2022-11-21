@@ -24,4 +24,4 @@ class CustomImageDataset(Dataset):
         return len(self.images)
 
     def __getitem__(self, idx):
-        return self.images[idx][0]
+        return self.images[idx][1]
