@@ -43,21 +43,23 @@ for epoch in range(10000000):
         batch_size = batch.shape[0]
         real = common.make_sample(batch)
 
-        # train discriminator
-        discriminator.zero_grad()
-
         pred = autoencoder(real)
-
-        real_prob = sigmoid(discriminator(real))
-        fake_prob = sigmoid(discriminator(pred))
-
         real_label = torch.ones((batch_size,), dtype=torch.float, device=common.device)
         fake_label = torch.zeros((batch_size,), dtype=torch.float, device=common.device)
 
-        loss_discriminator = bce(real_prob, real_label) + bce(fake_prob, fake_label)
-        loss_discriminator.backward()
-        optimizer_discriminator.step()
+        # train discriminator
+        if len(discriminator_loss) == 0 or gan_loss[-1] < 3:
+            discriminator.zero_grad()
+            real_prob = sigmoid(discriminator(real))
+            fake_prob = sigmoid(discriminator(pred))
+            loss_discriminator = bce(real_prob, real_label) + bce(fake_prob, fake_label)
+            loss_discriminator.backward()
+            optimizer_discriminator.step()
+            discriminator_loss.append(loss_discriminator.item())
+        else:
+            discriminator_loss.append(discriminator[-1])
 
+        # train autoencoder
         autoencoder.zero_grad()
         fake_prob = sigmoid(discriminator(pred))
         loss_mse = common.calc_loss(pred, real) * 50
@@ -67,10 +69,10 @@ for epoch in range(10000000):
         optimizer_encoder.step()
 
         autoencoder_loss.append(loss_autoencoder.item())
-        discriminator_loss.append(loss_discriminator.item())
         mse_loss.append(loss_mse.item())
         gan_loss.append(loss_gan.item())
-        print(epoch, loss_autoencoder.item(), loss_discriminator.item(), loss_mse.item(), loss_gan.item())
+
+        print(epoch, autoencoder_loss[-1], discriminator_loss[-1], mse_loss[-1], gan_loss[-1])
 
     if epoch % 100 == 0:
         torch.save(autoencoder.state_dict(), 'autoencoder_weights')
@@ -81,4 +83,5 @@ for epoch in range(10000000):
         plt.plot(gan_loss, label='gan_loss')
         plt.legend()
         plt.savefig('trash/gan' + str(epoch // 100) + '.png')
+        plt.show()
         print('saved')
