@@ -34,10 +34,11 @@ def print_example(data):
 img = torch.randn((100, common.N, common.M_REAL), device=common.device)
 step = common.T // 10
 data = []
-for i in trange(common.T - 1, -1, -1):
-    for step, batch in enumerate(common.dataloader):
-        real = common.make_sample(batch)
-        data.append(real[0])
-        pred = model(real)
-        data.append(pred)
+for step, batch in enumerate(common.dataloader):
+    real = common.make_sample(batch)
+    data.append(real[0])
+    pred = model(real)
+    data.append(pred)
+    if step == 50:
+        break
 print_example(data)
