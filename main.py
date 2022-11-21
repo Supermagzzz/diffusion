@@ -57,7 +57,7 @@ for epoch in range(10000000):
             optimizer_discriminator.step()
             discriminator_loss.append(loss_discriminator.item())
         else:
-            discriminator_loss.append(discriminator[-1])
+            discriminator_loss.append(discriminator_loss[-1])
 
         # train autoencoder
         autoencoder.zero_grad()
