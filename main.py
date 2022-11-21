@@ -28,6 +28,9 @@ print(common.device)
 optimizer_encoder = torch.optim.AdamW(autoencoder.parameters(), lr=0.00001)
 optimizer_discriminator = torch.optim.AdamW(discriminator.parameters(), lr=0.00001)
 
+def sigmoid(x):
+    return 1 / (1 + torch.exp(-x))
+
 bce = BCELoss()
 
 all_losses = []
@@ -43,13 +46,13 @@ for epoch in range(10000000):
 
         pred = autoencoder(real)
 
-        real_prob = discriminator(real)
-        fake_prob = discriminator(pred)
+        real_prob = sigmoid(discriminator(real))
+        fake_prob = sigmoid(discriminator(pred))
 
         real_label = torch.ones((batch_size,), dtype=torch.float, device=common.device)
         fake_label = torch.zeros((batch_size,), dtype=torch.float, device=common.device)
 
-        loss_discriminator = bce(real_label, real_prob) + bce(fake_label, fake_prob)
+        loss_discriminator = bce(real_prob, real_label) + bce(fake_prob, fake_label)
         loss_discriminator.backward()
         optimizer_discriminator.step()
 
@@ -59,15 +62,15 @@ for epoch in range(10000000):
 
         pred = autoencoder(real)
 
-        fake_prob = discriminator(pred)
+        fake_prob = sigmoid(discriminator(pred))
         real_label = torch.ones((batch_size,), dtype=torch.float, device=common.device)
-        loss_mse = common.calc_loss(pred, real)
-        loss_gan = bce(real_label, fake_prob)
+        loss_mse = -torch.log(common.calc_loss(pred, real))
+        loss_gan = bce(fake_prob, real_label)
         loss_autoencoder = loss_mse + loss_gan
         loss_autoencoder.backward()
         optimizer_encoder.step()
 
-        all_losses.append(torch.log(loss_autoencoder).item())
+        all_losses.append(torch.log(loss_autoencoder))
         print(epoch, loss_autoencoder.item(), loss_discriminator.item(), loss_mse.item(), loss_gan.item())
 
     if epoch % 100 == 0:
