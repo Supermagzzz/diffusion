@@ -68,7 +68,7 @@ class SimpleDenoiser(nn.Module):
                                             max_position_embeddings=self.common.N * self.common.M_REAL // 6 + 1))
 
         self.transform_embed = nn.Sequential(
-            nn.Linear(common.HIDDEN, common.HIDDEN),
+            nn.Linear(common.HIDDEN * 3, common.HIDDEN),
             nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
             nn.ReLU(),
@@ -117,7 +117,8 @@ class SimpleDenoiser(nn.Module):
         ], dim=-1))
 
         cls_token = self.make_batch(self.cls_token(torch.LongTensor([0]).to(self.device)), batch_size)
-        latent_embed = self.encoder(inputs_embeds=torch.cat([cls_token, embeds], dim=1)).last_hidden_state[:, 0, :]
+        hidden_state = self.encoder(inputs_embeds=torch.cat([cls_token, embeds], dim=1)).last_hidden_state
+        latent_embed = torch.cat([hidden_state[:, 0, :], hidden_state[:, 1, :], hidden_state[:, 2, :]], dim=1)
         latent_embed = self.transform_embed(latent_embed)
 
         out_embeds = self.make_out_embed(torch.cat([
