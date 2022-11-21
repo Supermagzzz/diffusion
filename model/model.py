@@ -78,7 +78,7 @@ class SimpleDenoiser(nn.Module):
         self.decoder = BertModel(BertConfig(common.BLOCKS, common.HIDDEN, num_attention_heads=8, num_hidden_layers=12,
                                             max_position_embeddings=self.common.N * self.common.M_REAL // 6))
 
-        self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 2, common.HIDDEN * 6), nn.ReLU()] + sum([[
+        self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 1, common.HIDDEN * 6), nn.ReLU()] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
             nn.ReLU()
         ] for i in range(2)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6), nn.ReLU()])
@@ -127,7 +127,7 @@ class SimpleDenoiser(nn.Module):
 
         noise_embeds = self.decoder(inputs_embeds=out_embeds).last_hidden_state
 
-        coord_embed = torch.cat([noise_embeds, embeds], dim=-1)
+        coord_embed = noise_embeds
         for layer in self.make_coord_embed:
             coord_embed = layer(coord_embed)
         coord_embed = coord_embed.reshape(batch_size, self.common.N * self.common.M_REAL, self.common.HIDDEN)
