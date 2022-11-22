@@ -83,5 +83,5 @@ for epoch in range(10000000):
         plt.plot(gan_loss, label='gan_loss')
         plt.legend()
         plt.savefig('trash/gan' + str(epoch // 100) + '.png')
-        plt.show()
+        plt.clf()
         print('saved')
