@@ -43,13 +43,14 @@ for epoch in range(10000000):
         batch_size = batch.shape[0]
         real = common.make_sample(batch)
 
-        pred = autoencoder(real)
         real_label = torch.ones((batch_size,), dtype=torch.float, device=common.device)
         fake_label = torch.zeros((batch_size,), dtype=torch.float, device=common.device)
 
         # train discriminator
-        if len(discriminator_loss) == 0 or gan_loss[-1] < 2:
-            discriminator.zero_grad()
+        autoencoder.zero_grad()
+        discriminator.zero_grad()
+        if True or len(discriminator_loss) == 0 or gan_loss[-1] < 2:
+            pred = autoencoder(real)
             real_prob = sigmoid(discriminator(real))
             fake_prob = sigmoid(discriminator(pred))
             loss_discriminator = bce(real_prob, real_label) + bce(fake_prob, fake_label)
@@ -61,6 +62,8 @@ for epoch in range(10000000):
 
         # train autoencoder
         autoencoder.zero_grad()
+        discriminator.zero_grad()
+        pred = autoencoder(real)
         fake_prob = sigmoid(discriminator(pred))
         loss_mse = common.calc_loss(pred, real) * 50
         loss_gan = bce(fake_prob, real_label)
