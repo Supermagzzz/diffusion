@@ -13,7 +13,7 @@ common = Common(check=True)
 model = SimpleDenoiser(common)
 model = nn.DataParallel(model)
 model.to(common.device)
-model.load_state_dict(torch.load('model_weights'), strict=False)
+model.load_state_dict(torch.load('autoencoder_weights'), strict=False)
 model.eval()
 print(common.device)
 
