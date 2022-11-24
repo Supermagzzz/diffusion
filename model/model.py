@@ -31,13 +31,13 @@ class SimpleDenoiser(nn.Module):
         self.pos_embed_table = nn.Sequential(
             SinusoidalPositionEmbeddings(common.HIDDEN),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.LeakyReLU(0.1)
+            nn.GELU()
         )
         self.unite_pos = nn.Sequential(
             nn.Linear(common.HIDDEN * 2, common.HIDDEN),
-            nn.LeakyReLU(0.1),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.LeakyReLU(0.1),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
 
@@ -45,47 +45,47 @@ class SimpleDenoiser(nn.Module):
 
         self.w_coords = nn.Sequential(
             nn.Linear(common.HIDDEN * 6, common.HIDDEN),
-            nn.LeakyReLU(0.1)
+            nn.GELU()
         )
         self.make_in_embed = nn.Sequential(
             nn.Linear(common.HIDDEN * 2, common.HIDDEN),
-            nn.LeakyReLU(0.1),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.LeakyReLU(0.1),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
 
         self.make_out_embed = nn.Sequential(
             nn.Linear(common.HIDDEN * 2, common.HIDDEN),
-            nn.LeakyReLU(0.1),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.LeakyReLU(0.1),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN)
         )
 
         self.cls_token = nn.Embedding(1, common.HIDDEN)
-        self.encoder = BertModel(BertConfig(common.BLOCKS, common.HIDDEN, num_attention_heads=8, num_hidden_layers=12,
+        self.encoder = BertModel(BertConfig(common.BLOCKS, common.HIDDEN, num_attention_heads=8, num_hidden_layers=4,
                                             max_position_embeddings=self.common.N * self.common.M_REAL // 6 + 1))
 
         self.transform_embed = nn.Sequential(
             nn.Linear(common.HIDDEN * 3, common.HIDDEN),
-            nn.LeakyReLU(0.1),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.LeakyReLU(0.1),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
 
-        self.decoder = BertModel(BertConfig(common.BLOCKS, common.HIDDEN, num_attention_heads=8, num_hidden_layers=12,
+        self.decoder = BertModel(BertConfig(common.BLOCKS, common.HIDDEN, num_attention_heads=8, num_hidden_layers=4,
                                             max_position_embeddings=self.common.N * self.common.M_REAL // 6))
 
-        self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 1, common.HIDDEN * 6), nn.LeakyReLU(0.1)] + sum([[
+        self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 1, common.HIDDEN * 6), nn.GELU()] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
-            nn.LeakyReLU(0.1)
-        ] for i in range(2)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6), nn.LeakyReLU(0.1)])
+            nn.GELU()
+        ] for i in range(2)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6), nn.GELU()])
 
-        self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN), nn.LeakyReLU(0.1)] + sum([[
+        self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN), nn.GELU()] + sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.LeakyReLU(0.1)
+            nn.GELU()
         ] for i in range(2)], []) + [nn.Linear(common.HIDDEN, 1)])
 
     def make_seq(self, data, embeds):
