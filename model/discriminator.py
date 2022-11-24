@@ -31,13 +31,13 @@ class SimpleDiscriminator(nn.Module):
         self.pos_embed_table = nn.Sequential(
             SinusoidalPositionEmbeddings(common.HIDDEN),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.ReLU()
+            nn.GELU()
         )
         self.unite_pos = nn.Sequential(
             nn.Linear(common.HIDDEN * 2, common.HIDDEN),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
 
@@ -45,13 +45,13 @@ class SimpleDiscriminator(nn.Module):
 
         self.w_coords = nn.Sequential(
             nn.Linear(common.HIDDEN * 6, common.HIDDEN),
-            nn.ReLU()
+            nn.GELU()
         )
         self.make_in_embed = nn.Sequential(
             nn.Linear(common.HIDDEN * 2, common.HIDDEN),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
 
@@ -61,15 +61,15 @@ class SimpleDiscriminator(nn.Module):
 
         self.transform_embed = nn.Sequential(
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(common.HIDDEN, 1),
         )
 
