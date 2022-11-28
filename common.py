@@ -3,8 +3,6 @@ import torch
 from dataset.dataloader import CustomImageDataset
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from deepsvg.svglib.svg import SVG
-
 
 def linear_beta_schedule(timesteps, start=0.0001, end=0.03):
     return torch.linspace(start, end, timesteps)
@@ -26,7 +24,7 @@ class Common:
         self.noise_level = 0.01
         self.know_level = 0.01
         self.batch_sz = 512
-        self.cpu_batch_sz = 2
+        self.cpu_batch_sz = 512
         self.apply_batch_sz = 1
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.dataset = CustomImageDataset('data/tensors', not check)

@@ -3,7 +3,6 @@ from torch import nn
 from transformers import BertConfig, BertModel
 import math
 
-
 class SinusoidalPositionEmbeddings(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -31,13 +30,13 @@ class SimpleDenoiser(nn.Module):
         self.pos_embed_table = nn.Sequential(
             SinusoidalPositionEmbeddings(common.HIDDEN),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.GELU()
+            nn.ReLU()
         )
         self.unite_pos = nn.Sequential(
             nn.Linear(common.HIDDEN * 2, common.HIDDEN),
-            nn.GELU(),
+            nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.GELU(),
+            nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
 
@@ -45,47 +44,57 @@ class SimpleDenoiser(nn.Module):
 
         self.w_coords = nn.Sequential(
             nn.Linear(common.HIDDEN * 6, common.HIDDEN),
-            nn.GELU()
+            nn.ReLU()
         )
         self.make_in_embed = nn.Sequential(
             nn.Linear(common.HIDDEN * 2, common.HIDDEN),
-            nn.GELU(),
+            nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.GELU(),
+            nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-        )
-
-        self.make_out_embed = nn.Sequential(
-            nn.Linear(common.HIDDEN * 2, common.HIDDEN),
-            nn.GELU(),
-            nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.GELU(),
-            nn.Linear(common.HIDDEN, common.HIDDEN)
         )
 
         self.cls_token = nn.Embedding(1, common.HIDDEN)
-        self.encoder = BertModel(BertConfig(common.BLOCKS, common.HIDDEN, num_attention_heads=8, num_hidden_layers=4,
+        self.encoder = BertModel(BertConfig(common.BLOCKS, common.HIDDEN, num_attention_heads=8, num_hidden_layers=6,
                                             max_position_embeddings=self.common.N * self.common.M_REAL // 6 + 1))
 
-        self.transform_embed = nn.Sequential(
-            nn.Linear(common.HIDDEN * 3, common.HIDDEN),
-            nn.GELU(),
+        self.make_out_embed = nn.Sequential(
+            nn.Linear(common.HIDDEN * 2, common.HIDDEN),
+            nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.GELU(),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+            nn.ReLU(),
             nn.Linear(common.HIDDEN, common.HIDDEN),
         )
 
-        self.decoder = BertModel(BertConfig(common.BLOCKS, common.HIDDEN, num_attention_heads=8, num_hidden_layers=4,
+        self.make_z_mean = nn.Sequential(
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+        )
+
+        self.make_z_var = nn.Sequential(
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+            nn.ReLU(),
+            nn.Linear(common.HIDDEN, common.HIDDEN),
+        )
+
+        self.decoder = BertModel(BertConfig(common.BLOCKS, common.HIDDEN, num_attention_heads=8, num_hidden_layers=6,
                                             max_position_embeddings=self.common.N * self.common.M_REAL // 6))
 
-        self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 1, common.HIDDEN * 6), nn.GELU()] + sum([[
+        self.make_coord_embed = nn.ModuleList([nn.Linear(common.HIDDEN * 1, common.HIDDEN * 6), nn.ReLU()] + sum([[
             nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6),
-            nn.GELU()
-        ] for i in range(2)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6), nn.GELU()])
+            nn.ReLU()
+        ] for i in range(2)], []) + [nn.Linear(common.HIDDEN * 6, common.HIDDEN * 6), nn.ReLU()])
 
-        self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN), nn.GELU()] + sum([[
+        self.make_noise_result = nn.ModuleList([nn.Linear(common.HIDDEN, common.HIDDEN), nn.ReLU()] + sum([[
             nn.Linear(common.HIDDEN, common.HIDDEN),
-            nn.GELU()
+            nn.ReLU()
         ] for i in range(2)], []) + [nn.Linear(common.HIDDEN, 1)])
 
     def make_seq(self, data, embeds):
@@ -118,8 +127,11 @@ class SimpleDenoiser(nn.Module):
 
         cls_token = self.make_batch(self.cls_token(torch.LongTensor([0]).to(self.device)), batch_size)
         hidden_state = self.encoder(inputs_embeds=torch.cat([cls_token, embeds], dim=1)).last_hidden_state
-        latent_embed = torch.cat([hidden_state[:, 0, :], hidden_state[:, 1, :], hidden_state[:, 2, :]], dim=1)
-        latent_embed = self.transform_embed(latent_embed)
+
+        z_mean = self.make_z_mean(hidden_state[:, 0, :]).reshape(batch_size, -1)
+        z_var = self.make_z_mean(hidden_state[:, 1, :]).reshape(batch_size, -1)
+        epsilon = torch.normal(0, 1, z_mean.shape).to(self.device)
+        latent_embed = z_mean + torch.exp(0.5 * z_var) * epsilon
 
         out_embeds = self.make_out_embed(torch.cat([
             self.make_seq(latent_embed, embeds),
@@ -136,4 +148,7 @@ class SimpleDenoiser(nn.Module):
         noise_result = coord_embed
         for layer in self.make_noise_result:
             noise_result = layer(noise_result)
-        return noise_result.reshape(batch_size, self.common.N, self.common.M_REAL)
+
+        kl_loss = -0.5 * (1 + z_var - torch.square(z_mean) - torch.exp(z_var)).sum(axis=1).mean()
+
+        return noise_result.reshape(batch_size, self.common.N, self.common.M_REAL), kl_loss
