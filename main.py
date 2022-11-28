@@ -66,7 +66,7 @@ if __name__ == "__main__":
             autoencoder.zero_grad()
             discriminator.zero_grad()
             pred, loss_kl = autoencoder(real)
-            loss_kl *= 5
+            loss_kl = loss_kl.mean() * 5
             fake_prob = sigmoid(discriminator(pred))
             loss_mse = common.calc_loss(pred, real) * 500
             loss_gan = bce(fake_prob, real_label)
