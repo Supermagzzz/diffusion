@@ -3,9 +3,6 @@ from model import *
 
 train_dataset = load_dataset(input_path + '/vector_dataset')
 
-make_png(train_dataset[14])
-exit(0)
-
 m = len(train_dataset)
 
 train_dataset = [(im, make_png(im)) for im in train_dataset]
