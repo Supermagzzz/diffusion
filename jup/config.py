@@ -85,8 +85,8 @@ def make_png(svg):
                  1,  # seed
                  None,
                  *scene_args)
-    # return img
-    pydiffvg.imwrite(img.cpu(), 'test.png', gamma=2.2)
+    return img
+    # pydiffvg.imwrite(img.cpu(), 'test.png', gamma=2.2)
 
 def make_png_batch(x):
     return torch.stack([make_png(svg) for svg in x])
