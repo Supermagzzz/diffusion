@@ -33,7 +33,7 @@ def load_dataset(img_dir):
             img_path = os.path.join(img_dir, i)
             data = pickle.load(open(img_path, 'rb'))
             images.append((img_path, data))
-    images.sort(key=lambda path_and_im: path_and_im[0].encode())
+    images.sort(key=lambda path_and_im: path_and_im[0])
     imgs = [im for path, im in images]
     return imgs
 
