@@ -26,7 +26,7 @@ def print_example(data):
         im = imageio.imread(path)
         plt.subplot(1, len(data), i + 1)
         plt.imshow(im)
-    plt.savefig('trash/check')
+    plt.savefig('tmp/check')
 
 img = torch.randn((1, common.N, common.M_REAL), device=common.device)
 step = common.T // 10
@@ -53,8 +53,8 @@ for batch in common.dataloader:
     baseline = common.calc_loss(noise, -batch * common.know_level)
     print(loss.item(), baseline.item(), (loss / baseline).item())
     for x in range(common.apply_batch_sz):
-        common.make_svg(common.sample_timestep(noised[x], torch.Tensor([t[x]]).long().to(common.device), pred_noise[x])).save_svg('trash/' + 'test' + str(x) + '.svg')
-        common.make_svg(batch[x]).save_svg('trash/' + 'real' + str(x) + '.svg')
-        common.make_svg(noised[x]).save_svg('trash/' + 'inp' + str(x) + '.svg')
+        common.make_svg(common.sample_timestep(noised[x], torch.Tensor([t[x]]).long().to(common.device), pred_noise[x])).save_svg('tmp/' + 'test' + str(x) + '.svg')
+        common.make_svg(batch[x]).save_svg('tmp/' + 'real' + str(x) + '.svg')
+        common.make_svg(noised[x]).save_svg('tmp/' + 'inp' + str(x) + '.svg')
     break
 

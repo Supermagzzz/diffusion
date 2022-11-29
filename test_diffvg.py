@@ -7,7 +7,6 @@ from dataset.dataloader import CustomImageDataset
 from torch.utils.data import DataLoader
 
 from deepsvg.svglib.svg import SVG
-from model.model import SimpleDenoiser
 import diffvg
 import pydiffvg
 
@@ -47,7 +46,7 @@ dataset = CustomImageDataset('data/tensors')
 for j, el in enumerate(dataset):
     if j <= 4:
         continue
-    canvas_width, canvas_height = 50, 50
+    canvas_width, canvas_height = 100, 100
     el += 0.5
     el *= int(0.8 * canvas_width)
     el += int(0.1 * canvas_width)
@@ -75,4 +74,3 @@ for j, el in enumerate(dataset):
                  *scene_args)
     pydiffvg.imwrite(img.cpu(), 'test.png', gamma=2.2)
     break
-

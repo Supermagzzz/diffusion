@@ -89,6 +89,6 @@ if __name__ == "__main__":
             plt.plot(mse_loss, label='mse_loss')
             plt.plot(gan_loss, label='gan_loss')
             plt.legend()
-            plt.savefig(output_path + '/trash/gan' + str(epoch // 100) + '.png')
+            plt.savefig(output_path + '/tmp/gan' + str(epoch // 100) + '.png')
             plt.clf()
             print('saved')

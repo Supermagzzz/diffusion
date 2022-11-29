@@ -28,7 +28,7 @@ def print_example(data):
         im = imageio.imread(path)
         ax[i // 10, i % 10].imshow(im)
         ax[i // 10, i % 10].axis('off')
-    plt.savefig('trash/100_with_real')
+    plt.savefig('tmp/100_with_real')
 
 
 img = torch.randn((100, common.N, common.M_REAL), device=common.device)

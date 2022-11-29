@@ -28,7 +28,7 @@ for x in [0, 4, 7, 10, 12, 20]:
             im = imageio.imread(path)
             ax[i // 10, i % 10].imshow(im)
             ax[i // 10, i % 10].axis('off')
-        plt.savefig('trash/100_' + str(x) + '_')
+        plt.savefig('tmp/100_' + str(x) + '_')
 
 
     data = []

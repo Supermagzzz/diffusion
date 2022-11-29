@@ -141,7 +141,7 @@ def print_example(data):
         im = imageio.imread(path)
         ax[i // 4, i % 4].imshow(im)
         ax[i // 4, i % 4].axis('off')
-    plt.savefig('trash/100read')
+    plt.savefig('tmp/100read')
 
 def print_deepsvg_example(data):
     plt.figure(figsize=(40, 40))
@@ -153,18 +153,22 @@ def print_deepsvg_example(data):
         im = imageio.imread(path)
         ax[i // 4, i % 4].imshow(im)
         ax[i // 4, i % 4].axis('off')
-    plt.savefig('trash/100read_real')
+    plt.savefig('tmp/100read_real')
 
 
 for i in range(0, 99508):
-    print(i)
-    with open('data/icons_tensor/' + str(i) + '.pkl', 'rb') as f:
-        data = pickle.load(f)
+    try:
+        if i % 500 == 0:
+            print(i)
+        with open('data/icons_tensor/' + str(i) + '.pkl', 'rb') as f:
+            data = pickle.load(f)
 
-    svg = SVG.from_tensors(data["tensors"][0], Bbox(300)).normalize().zoom(0.9).canonicalize().simplify_heuristic()
-    if check_image(svg):
-        tensor = prepare_svg(svg)
-        tensor -= torch.sum(tensor) / tensor.shape[0] / tensor.shape[1]
-        tensor /= torch.max(tensor) - torch.min(tensor)
-        with open('data/tensors/' + str(i) + '.pkl', 'wb') as fout:
-            pickle.dump(tensor, fout)
+        svg = SVG.from_tensors(data["tensors"][0], Bbox(300)).normalize().zoom(0.9).canonicalize().simplify_heuristic()
+        if check_image(svg):
+            tensor = prepare_svg(svg)
+            tensor -= torch.sum(tensor) / tensor.shape[0] / tensor.shape[1]
+            tensor /= torch.max(tensor) - torch.min(tensor)
+            with open('data/tensors/' + str(i) + '.pkl', 'wb') as fout:
+                pickle.dump(tensor, fout)
+    except:
+        pass
