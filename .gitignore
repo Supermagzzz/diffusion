@@ -4,4 +4,7 @@ trash
 .idea
 tmp
 jup/vector_dataset
+jup/vae
+jup/dis
+
 

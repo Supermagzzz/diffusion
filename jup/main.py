@@ -5,6 +5,8 @@ train_dataset = load_dataset(input_path + '/vector_dataset')
 
 m = len(train_dataset)
 
+train_dataset = [(im, make_png(im)) for im in train_dataset]
+
 train_data, val_data = random_split(train_dataset, [m - int(m * 0.2), int(m * 0.2)])
 
 train_loader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE, drop_last=True)
@@ -15,7 +17,7 @@ def plot_ae_outputs(vae, epoch, n=10):
 
     for i in range(n):
         ax = plt.subplot(2, n, i + 1)
-        img = make_batch(1, train_data[i].to(device))
+        img = make_batch(1, train_data[i][0].to(device))
         vae.eval()
         vae.eval()
         with torch.no_grad():
@@ -48,6 +50,7 @@ def plot_ae_outputs(vae, epoch, n=10):
 
 bce = BCELoss()
 
+
 def train_epoch(vae, dis, device, dataloader, optim_vae, optim_dis):
     vae.train()
     dis.train()
@@ -57,7 +60,7 @@ def train_epoch(vae, dis, device, dataloader, optim_vae, optim_dis):
     train_loss_dis = 0.0
     pbar = dataloader
     steps = 0
-    for x in pbar:
+    for x, png in pbar:
         steps += 1
         x = x.to(device)
 
@@ -81,7 +84,7 @@ def train_epoch(vae, dis, device, dataloader, optim_vae, optim_dis):
             x_fake, vae_kl = vae(x)
             fake_prob = dis(x_fake)
 
-            loss_mse = ((make_png_batch(x) - make_png_batch(x_fake)) ** 2).mean() * 100
+            loss_mse = ((png - make_png_batch(x_fake)) ** 2).mean() * 100
             loss_kl = vae_kl.mean() / 100
             loss_bce = bce(fake_prob, true_label) / 4
             loss_vae = loss_mse + loss_kl + loss_bce
@@ -90,20 +93,12 @@ def train_epoch(vae, dis, device, dataloader, optim_vae, optim_dis):
             loss_vae.backward()
             optim_vae.step()
 
-        train_loss_mse += loss_mse.item()
-        train_loss_bce += loss_bce.item()
-        train_loss_kl += loss_kl.item()
-        train_loss_dis += loss_dis.item()
-        if device == torch.device("cpu"):
-            break
-
-    train_loss_mse /= steps
-    train_loss_bce /= steps
-    train_loss_kl /= steps
-    train_loss_dis /= steps
-
-    print("%d: train, var_mse: %0.3f, var_kl: %0.3f, var_bce: %0.3f, dis: %0.3f" % (
-        epoch, train_loss_mse, train_loss_kl, train_loss_bce, train_loss_dis))
+        train_loss_mse = loss_mse.item()
+        train_loss_bce = loss_bce.item()
+        train_loss_kl = loss_kl.item()
+        train_loss_dis = loss_dis.item()
+        print("%d: train, var_mse: %0.3f, var_kl: %0.3f, var_bce: %0.3f, dis: %0.3f" % (
+            epoch, train_loss_mse, train_loss_kl, train_loss_bce, train_loss_dis))
 
 
 torch.manual_seed(0)
